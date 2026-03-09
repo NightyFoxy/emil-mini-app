@@ -1,98 +1,131 @@
 import type {
-  AccountabilityStyle,
-  Blocker,
-  DailyPriorityCapacity,
-  EnergyPattern,
+  ChaosPattern,
   OnboardingAnswers,
   OperationalProfile,
-  OutputFormat,
-  PlanningStyle,
+  PrimaryNeed,
+  ReminderWindow,
+  ResponseStyle,
+  StartupBundle,
+  TabId,
+  ToneStyle,
 } from '@/types/models';
 import { operationalProfileSchema } from './schemas';
 
-const planningLabels: Record<PlanningStyle, string> = {
-  day: 'планирование по дням',
-  week: 'планирование по неделям',
-  flexible: 'гибкое планирование',
-  none: 'планирование не закреплено',
+const startAreaLabels = {
+  tasks: 'дела и задачи',
+  routine: 'режим дня',
+  expenses: 'финансы и траты',
+  workouts: 'тренировки и активность',
+  all: 'всё сразу',
+  explore: 'пока осматривается',
+} satisfies Record<OnboardingAnswers['startArea'], string>;
+
+const chaosLabels: Record<ChaosPattern, string> = {
+  too_many_tasks: 'слишком много дел',
+  forget_important: 'забывает важное',
+  hard_to_start: 'неясно, с чего начать',
+  procrastination: 'часто откладывает',
+  keeping_in_head: 'всё держит в голове',
+  no_routine: 'нет стабильного режима',
 };
 
-const capacityLabels: Record<DailyPriorityCapacity, string> = {
-  one: '1 главное дело',
-  three: '3 приоритета',
-  five_plus: '5+ пунктов',
-  depends: 'ёмкость зависит от дня',
+const primaryNeedLabels: Record<PrimaryNeed, string> = {
+  daily_plan: 'план на день',
+  reminders: 'напоминания',
+  step_breakdown: 'разбор хаоса по шагам',
+  task_control: 'контроль задач',
+  expense_tracking: 'учёт трат',
+  workout_plan: 'план тренировок',
 };
 
-const energyLabels: Record<EnergyPattern, string> = {
-  morning: 'пик утром',
-  daytime: 'пик днём',
-  evening: 'пик вечером',
-  unstable: 'энергия нестабильна',
+const responseStyleLabels: Record<ResponseStyle, string> = {
+  very_short: 'очень коротко',
+  short_list: 'коротким списком',
+  step_by_step: 'по шагам',
+  table: 'таблицей',
+  situational: 'по ситуации',
 };
 
-const accountabilityLabels: Record<AccountabilityStyle, string> = {
-  gentle: 'мягкий тон',
-  neutral: 'нейтральный тон',
-  direct: 'прямой тон',
-  strict: 'строгий тон',
+const toneLabels: Record<ToneStyle, string> = {
+  soft: 'мягко',
+  calm: 'спокойно',
+  business: 'деловым тоном',
+  tough: 'жёстко и по делу',
 };
 
-const formatRules: Record<OutputFormat, string> = {
-  short_checklist: 'Отвечай короткими чек-листами, когда это возможно.',
-  table: 'Используй таблицу только если нужно быстро сравнить варианты.',
-  step_by_step: 'Если задача новая или вязкая, давай пошаговый план.',
-  top_3: 'Начинай с топ-3 приоритетов, когда запрос широкий.',
-  time_blocks: 'Предлагай тайм-блоки для расписания и фокус-сессий.',
+const reminderLabels: Record<ReminderWindow, string> = {
+  morning: 'утром',
+  day: 'днём',
+  evening: 'вечером',
+  before_sleep: 'перед сном',
+  on_demand: 'только по запросу',
 };
 
-const blockerRules: Record<Blocker, string> = {
-  too_big: 'Если задача большая, режь её на следующий наблюдаемый шаг.',
-  unclear: 'Если задача неясна, сначала фиксируй конкретный результат и первый физический шаг.',
-  fear_of_mistakes: 'Снижая страх ошибки, предлагай черновой безопасный вариант старта.',
-  fatigue: 'При усталости уменьши объём до версии на 5-10 минут.',
-  distractions: 'При отвлечениях возвращай к одному текущему действию и короткому таймеру.',
-  too_many_obligations: 'Если обязательств слишком много, помогай явно отсекать или переносить лишнее.',
-  low_urgency: 'Если срочность низкая, связывай задачу с конкретной датой или последствием.',
-  other: 'Сначала уточняй барьер, затем предлагай одно простое действие.',
+const bundleLabels: Record<StartupBundle, string> = {
+  today_plan: 'план на сегодня',
+  reminders: 'напоминания',
+  expenses: 'учёт трат',
+  workouts: 'тренировки',
+  all_core: 'всё основное',
 };
 
-const planningRuleMap: Record<PlanningStyle, string> = {
-  day: 'Структурируй ответы вокруг сегодняшнего дня и ближайшего следующего шага.',
-  week: 'Показывай связь между днём и недельными приоритетами.',
-  flexible: 'Давай адаптивный план с минимальным числом обязательных пунктов.',
-  none: 'Не предполагай существующую систему планирования, начинай с простого каркаса.',
-};
+function getFirstScreen(answers: OnboardingAnswers): TabId {
+  if (answers.startArea === 'expenses' || answers.primaryNeed === 'expense_tracking' || answers.startupBundle === 'expenses') {
+    return 'expenses';
+  }
 
-const capacityRuleMap: Record<DailyPriorityCapacity, string> = {
-  one: 'Не предлагай больше одного главного приоритета на день.',
-  three: 'Держи фокус на трёх основных приоритетах.',
-  five_plus: 'Можно работать со списком из нескольких пунктов, но выделяй ядро.',
-  depends: 'Каждый раз уточняй дневную ёмкость перед плотным планом.',
-};
+  if (answers.startArea === 'workouts' || answers.primaryNeed === 'workout_plan' || answers.startupBundle === 'workouts') {
+    return 'workouts';
+  }
+
+  return 'today';
+}
+
+function derivePracticalTags(answers: OnboardingAnswers): string[] {
+  return Array.from(
+    new Set([
+      `старт: ${startAreaLabels[answers.startArea]}`,
+      `хаос: ${chaosLabels[answers.chaosPattern]}`,
+      `главный запрос: ${primaryNeedLabels[answers.primaryNeed]}`,
+      `формат: ${responseStyleLabels[answers.responseStyle]}`,
+      `тон: ${toneLabels[answers.toneStyle]}`,
+      `напоминания: ${reminderLabels[answers.reminderWindow]}`,
+      `стартовый набор: ${bundleLabels[answers.startupBundle]}`,
+    ]),
+  );
+}
 
 export function deriveAssistantRules(answers: OnboardingAnswers): string[] {
   const rules = [
-    planningRuleMap[answers.planningStyle],
-    capacityRuleMap[answers.dailyPriorityCapacity],
-    `Тон ответов: ${accountabilityLabels[answers.accountabilityStyle]}.`,
-    `Учитывай паттерн энергии: ${energyLabels[answers.energyPattern]}.`,
+    `Главная зона пользы: ${primaryNeedLabels[answers.primaryNeed]}.`,
+    `Подавай ответы ${responseStyleLabels[answers.responseStyle]}.`,
+    `Тон общения держи ${toneLabels[answers.toneStyle]}.`,
   ];
 
-  for (const blocker of answers.mainBlockers) {
-    rules.push(blockerRules[blocker]);
+  if (answers.chaosPattern === 'hard_to_start') {
+    rules.push('Если человек застрял, сразу предлагай первый физический шаг без абстракций.');
+  }
+  if (answers.chaosPattern === 'too_many_tasks' || answers.chaosPattern === 'keeping_in_head') {
+    rules.push('Сначала разгружай голову: группируй входящее и выделяй 1-3 ближайших действия.');
+  }
+  if (answers.chaosPattern === 'forget_important') {
+    rules.push('Фиксируй важные пункты и предлагай напоминания без лишнего текста.');
+  }
+  if (answers.chaosPattern === 'procrastination') {
+    rules.push('Для старта дроби задачу на короткие шаги и сокращай порог входа.');
+  }
+  if (answers.chaosPattern === 'no_routine') {
+    rules.push('Помогай держать простой повторяемый ритм дня без перегруза.');
   }
 
-  for (const format of answers.preferredOutputFormats) {
-    rules.push(formatRules[format]);
+  if (answers.dailyPlanReminderEnabled && answers.reminderWindow !== 'on_demand') {
+    rules.push(`Напоминай о плане ${reminderLabels[answers.reminderWindow]}.`);
+  } else {
+    rules.push('Не навязывай напоминания без явного запроса.');
   }
 
-  if (answers.avoidPhrases.trim()) {
-    rules.push(`Избегай формулировок: ${answers.avoidPhrases.trim()}.`);
-  }
-
-  if (answers.startHelps.trim()) {
-    rules.push(`Для запуска используй опоры: ${answers.startHelps.trim()}.`);
+  if (answers.specialPreferences.trim()) {
+    rules.push(`Особые пожелания: ${answers.specialPreferences.trim()}.`);
   }
 
   return Array.from(new Set(rules));
@@ -100,17 +133,15 @@ export function deriveAssistantRules(answers: OnboardingAnswers): string[] {
 
 export function buildLlmProfileSummary(answers: OnboardingAnswers, assistantRules: string[]): string {
   return [
-    `Профиль пользователя: ${answers.displayName}.`,
-    `Цели: ${answers.goals.join('; ')}.`,
-    `Контекст хаоса: ${answers.chaosSources.join(', ')}.`,
-    `Стиль планирования: ${planningLabels[answers.planningStyle]}.`,
-    `Дневная ёмкость: ${capacityLabels[answers.dailyPriorityCapacity]}.`,
-    `Энергия: ${energyLabels[answers.energyPattern]}.`,
-    `Тон контроля: ${accountabilityLabels[answers.accountabilityStyle]}.`,
-    `Главные блокеры: ${answers.mainBlockers.join(', ')}.`,
-    `Предпочтительный формат ответа: ${answers.preferredOutputFormats.join(', ')}.`,
-    `Напоминание о завтрашнем плане: ${answers.reminderEnabled ? answers.reminderTime : 'выключено'}.`,
-    `Правила для ассистента: ${assistantRules.slice(0, 4).join(' ')}`,
+    `${answers.displayName}: настройка помощника завершена.`,
+    `Сначала хочет наладить ${startAreaLabels[answers.startArea]}.`,
+    `Главный источник хаоса: ${chaosLabels[answers.chaosPattern]}.`,
+    `Главная польза от Эмиля: ${primaryNeedLabels[answers.primaryNeed]}.`,
+    `Ответы нужны ${responseStyleLabels[answers.responseStyle]}.`,
+    `Предпочтительный тон: ${toneLabels[answers.toneStyle]}.`,
+    `Ритм напоминаний: ${answers.dailyPlanReminderEnabled ? reminderLabels[answers.reminderWindow] : 'без ежедневного напоминания'}.`,
+    `Стартовый набор: ${bundleLabels[answers.startupBundle]}.`,
+    `Ключевые правила: ${assistantRules.slice(0, 4).join(' ')}`,
   ].join(' ');
 }
 
@@ -119,27 +150,27 @@ export function generateOperationalProfile(
   now = new Date(),
 ): OperationalProfile {
   const assistantRules = deriveAssistantRules(answers);
+  const firstScreen = getFirstScreen(answers);
+  const practicalTags = derivePracticalTags(answers);
   const iso = now.toISOString();
 
-  const profile: OperationalProfile = {
+  return operationalProfileSchema.parse({
     profileVersion: '1.0.0',
     displayName: answers.displayName.trim(),
-    goals: answers.goals.map((goal) => goal.trim()),
-    chaosSources: answers.chaosSources,
-    planningStyle: answers.planningStyle,
-    dailyPriorityCapacity: answers.dailyPriorityCapacity,
-    energyPattern: answers.energyPattern,
-    accountabilityStyle: answers.accountabilityStyle,
-    mainBlockers: answers.mainBlockers,
-    preferredOutputFormats: answers.preferredOutputFormats,
-    reminderTime: answers.reminderEnabled ? answers.reminderTime : null,
-    avoidPhrases: answers.avoidPhrases.trim(),
-    startHelps: answers.startHelps.trim(),
+    startArea: answers.startArea,
+    chaosPattern: answers.chaosPattern,
+    primaryNeed: answers.primaryNeed,
+    responseStyle: answers.responseStyle,
+    toneStyle: answers.toneStyle,
+    reminderWindow: answers.reminderWindow,
+    dailyPlanReminderEnabled: answers.dailyPlanReminderEnabled,
+    startupBundle: answers.startupBundle,
+    specialPreferences: answers.specialPreferences.trim(),
+    firstScreen,
+    practicalTags,
     assistantRules,
     llmProfileSummary: buildLlmProfileSummary(answers, assistantRules),
     createdAt: iso,
     updatedAt: iso,
-  };
-
-  return operationalProfileSchema.parse(profile);
+  });
 }

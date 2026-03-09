@@ -4,8 +4,8 @@ import { generateOperationalProfile } from '@/lib/profile/deriveProfile';
 import { createStorageAdapter } from '@/lib/storage';
 import type {
   AppStateSnapshot,
-  EnergyPattern,
   OnboardingAnswers,
+  ReminderWindow,
   TabId,
   TaskBucket,
   TaskItem,
@@ -13,6 +13,18 @@ import type {
   TodayMode,
 } from '@/types/models';
 import { createCompletedDemoState, createDemoState } from './seed';
+
+function isCompatibleSnapshot(snapshot: AppStateSnapshot | null): snapshot is AppStateSnapshot {
+  if (!snapshot) {
+    return false;
+  }
+
+  if (!snapshot.onboardingCompleted) {
+    return true;
+  }
+
+  return Boolean(snapshot.onboardingAnswers?.startArea && snapshot.profile?.firstScreen);
+}
 
 const storage = createStorageAdapter();
 
@@ -23,7 +35,7 @@ interface AppStore extends AppStateSnapshot {
   completeOnboarding: (answers: OnboardingAnswers) => Promise<void>;
   setActiveTab: (tab: TabId) => void;
   setTodayMode: (mode: TodayMode) => void;
-  setTodayEnergy: (energy: EnergyPattern | null) => void;
+  setTodayEnergy: (energy: ReminderWindow | null) => void;
   addTask: (input: {
     title: string;
     type: TaskType;
@@ -33,7 +45,7 @@ interface AppStore extends AppStateSnapshot {
   }) => Promise<void>;
   toggleTaskDone: (taskId: string) => Promise<void>;
   movePriorityTask: (taskId: string, direction: 'up' | 'down') => Promise<void>;
-  updateProfileNotes: (patch: Pick<OnboardingAnswers, 'avoidPhrases' | 'startHelps'>) => Promise<void>;
+  updateProfileNotes: (patch: Pick<OnboardingAnswers, 'specialPreferences'>) => Promise<void>;
   requestDemoReset: () => Promise<void>;
 }
 
@@ -44,6 +56,8 @@ async function persistState(state: AppStore) {
     profile: state.profile,
     tasks: state.tasks,
     weeklyReview: state.weeklyReview,
+    expenses: state.expenses,
+    workouts: state.workouts,
     todayMode: state.todayMode,
     todayEnergy: state.todayEnergy,
     activeTab: state.activeTab,
@@ -77,7 +91,12 @@ export const useAppStore = create<AppStore>((set, get) => ({
   storageKind: storage.kind,
 
   async loadState() {
-    const loaded = (await storage.load()) ?? (import.meta.env.DEV ? createCompletedDemoState() : createDemoState());
+    const rawLoaded = await storage.load();
+    const loaded = isCompatibleSnapshot(rawLoaded)
+      ? rawLoaded
+      : import.meta.env.DEV
+        ? createCompletedDemoState()
+        : createDemoState();
     set({
       ...loaded,
       initialized: true,
@@ -91,7 +110,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       onboardingCompleted: true,
       onboardingAnswers: answers,
       profile,
-      activeTab: 'today',
+      activeTab: profile.firstScreen,
     });
     await persistState(get());
   },

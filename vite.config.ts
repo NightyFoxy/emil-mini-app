@@ -16,9 +16,6 @@ export default defineConfig({
     }),
     tailwindcss(),
   ],
-  build: {
-    target: 'es2019',
-  },
   test: {
     environment: 'jsdom',
     globals: true,

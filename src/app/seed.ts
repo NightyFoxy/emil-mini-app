@@ -1,20 +1,24 @@
-import type { AppStateSnapshot, OnboardingAnswers, TaskItem, WeeklyReviewState } from '@/types/models';
+import type {
+  AppStateSnapshot,
+  ExpenseItem,
+  OnboardingAnswers,
+  TaskItem,
+  WeeklyReviewState,
+  WorkoutItem,
+} from '@/types/models';
 import { generateOperationalProfile } from '@/lib/profile/deriveProfile';
 
 export const demoAnswers: OnboardingAnswers = {
   displayName: 'Эмиль',
-  goals: ['Стабилизировать планирование недели', 'Снизить перегруз по входящему', 'Держать фокус на 3 приоритетах'],
-  chaosSources: ['work', 'personal_admin', 'communication'],
-  planningStyle: 'week',
-  dailyPriorityCapacity: 'three',
-  energyPattern: 'morning',
-  accountabilityStyle: 'direct',
-  mainBlockers: ['too_big', 'distractions', 'too_many_obligations'],
-  preferredOutputFormats: ['top_3', 'short_checklist', 'step_by_step'],
-  reminderEnabled: true,
-  reminderTime: '21:30',
-  avoidPhrases: 'просто расслабься, всё получится',
-  startHelps: 'один чёткий первый шаг и короткий дедлайн',
+  startArea: 'tasks',
+  chaosPattern: 'too_many_tasks',
+  primaryNeed: 'daily_plan',
+  responseStyle: 'short_list',
+  toneStyle: 'business',
+  reminderWindow: 'evening',
+  dailyPlanReminderEnabled: true,
+  startupBundle: 'all_core',
+  specialPreferences: 'не люблю длинные ответы, вечером меньше сил',
 };
 
 export const demoTasks: TaskItem[] = [
@@ -87,6 +91,18 @@ export const demoWeeklyReview: WeeklyReviewState = {
   ],
 };
 
+export const demoExpenses: ExpenseItem[] = [
+  { id: 'expense-1', title: 'Продукты', amount: 1850, category: 'food', createdAt: '2026-03-08T12:00:00.000Z' },
+  { id: 'expense-2', title: 'Такси', amount: 420, category: 'transport', createdAt: '2026-03-08T20:10:00.000Z' },
+  { id: 'expense-3', title: 'Аптека', amount: 760, category: 'health', createdAt: '2026-03-07T18:40:00.000Z' },
+];
+
+export const demoWorkouts: WorkoutItem[] = [
+  { id: 'workout-1', title: 'Ходьба 30 минут', status: 'planned', durationMinutes: 30, focus: 'walk' },
+  { id: 'workout-2', title: 'Мобилити дома', status: 'planned', durationMinutes: 20, focus: 'mobility' },
+  { id: 'workout-3', title: 'Силовая', status: 'done', durationMinutes: 45, focus: 'strength' },
+];
+
 export function createDemoState(): AppStateSnapshot {
   return {
     onboardingCompleted: false,
@@ -94,6 +110,8 @@ export function createDemoState(): AppStateSnapshot {
     profile: null,
     tasks: demoTasks,
     weeklyReview: demoWeeklyReview,
+    expenses: demoExpenses,
+    workouts: demoWorkouts,
     todayMode: 'normal',
     todayEnergy: null,
     activeTab: 'today',
@@ -107,8 +125,10 @@ export function createCompletedDemoState(): AppStateSnapshot {
     profile: generateOperationalProfile(demoAnswers, new Date('2026-03-09T08:00:00.000Z')),
     tasks: demoTasks,
     weeklyReview: demoWeeklyReview,
+    expenses: demoExpenses,
+    workouts: demoWorkouts,
     todayMode: 'normal',
-    todayEnergy: 'morning',
+    todayEnergy: 'evening',
     activeTab: 'today',
   };
 }

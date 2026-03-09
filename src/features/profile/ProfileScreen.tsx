@@ -10,8 +10,7 @@ export function ProfileScreen() {
   const requestDemoReset = useAppStore((state) => state.requestDemoReset);
   const storageKind = useAppStore((state) => state.storageKind);
 
-  const [avoidPhrases, setAvoidPhrases] = useState(answers?.avoidPhrases ?? '');
-  const [startHelps, setStartHelps] = useState(answers?.startHelps ?? '');
+  const [specialPreferences, setSpecialPreferences] = useState(answers?.specialPreferences ?? '');
   const [copied, setCopied] = useState('');
 
   if (!profile || !answers) {
@@ -33,25 +32,41 @@ export function ProfileScreen() {
         <SectionTitle title="Операционный профиль" />
         <div className="space-y-2 text-sm text-[var(--tg-text-color)]">
           <div>Версия: {profile.profileVersion}</div>
-          <div>Планирование: {profile.planningStyle}</div>
-          <div>Ёмкость дня: {profile.dailyPriorityCapacity}</div>
-          <div>Энергия: {profile.energyPattern}</div>
-          <div>Тон: {profile.accountabilityStyle}</div>
-          <div>Напоминание: {profile.reminderTime ?? 'выключено'}</div>
+          <div>С чего начали: {profile.startArea}</div>
+          <div>Главный запрос: {profile.primaryNeed}</div>
+          <div>Формат ответов: {profile.responseStyle}</div>
+          <div>Тон: {profile.toneStyle}</div>
+          <div>Напоминания: {profile.dailyPlanReminderEnabled ? profile.reminderWindow : 'выключены'}</div>
+          <div>Первый экран: {profile.firstScreen}</div>
         </div>
       </Card>
 
       <Card className="space-y-4">
-        <SectionTitle title="Редактируемые предпочтения" />
-        <TextInput value={avoidPhrases} onChange={setAvoidPhrases} placeholder="Каких фраз избегать" multiline />
-        <TextInput value={startHelps} onChange={setStartHelps} placeholder="Что помогает начать" multiline />
+        <SectionTitle title="Особые пожелания" />
+        <TextInput
+          value={specialPreferences}
+          onChange={setSpecialPreferences}
+          placeholder="Например: вечером мало сил, не люблю длинные ответы"
+          multiline
+        />
         <PrimaryButton
           onClick={() => {
-            void updateProfileNotes({ avoidPhrases, startHelps });
+            void updateProfileNotes({ specialPreferences });
           }}
         >
           Сохранить
         </PrimaryButton>
+      </Card>
+
+      <Card className="space-y-4">
+        <SectionTitle title="Практические теги" />
+        <div className="space-y-2">
+          {profile.practicalTags.map((tag) => (
+            <div key={tag} className="rounded-[18px] bg-black/10 px-4 py-3 text-sm text-[var(--tg-text-color)]">
+              {tag}
+            </div>
+          ))}
+        </div>
       </Card>
 
       <Card className="space-y-4">
@@ -78,7 +93,7 @@ export function ProfileScreen() {
       <Card className="space-y-4">
         <SectionTitle title="Debug" />
         <Toggle
-          checked={Boolean(profile.reminderTime)}
+          checked={profile.dailyPlanReminderEnabled}
           onChange={() => undefined}
           label="Напоминание активно"
           description="Состояние берётся из текущего профиля."

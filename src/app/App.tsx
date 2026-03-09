@@ -9,15 +9,17 @@ import { InboxScreen } from '@/features/inbox/InboxScreen';
 import { FocusScreen } from '@/features/focus/FocusScreen';
 import { WeekScreen } from '@/features/week/WeekScreen';
 import { ProfileScreen } from '@/features/profile/ProfileScreen';
+import { ExpensesScreen } from '@/features/expenses/ExpensesScreen';
+import { WorkoutsScreen } from '@/features/workouts/WorkoutsScreen';
 import { Card } from '@/components/ui';
 import type { TabId } from '@/types/models';
 
 const tabs: Array<{ id: TabId; label: string }> = [
-  { id: 'today', label: 'Today' },
-  { id: 'inbox', label: 'Inbox' },
-  { id: 'focus', label: 'Focus' },
-  { id: 'week', label: 'Week' },
-  { id: 'profile', label: 'Profile' },
+  { id: 'today', label: 'Сегодня' },
+  { id: 'inbox', label: 'Входящее' },
+  { id: 'focus', label: 'Фокус' },
+  { id: 'week', label: 'Неделя' },
+  { id: 'profile', label: 'Профиль' },
 ];
 
 function AppBody() {
@@ -62,6 +64,8 @@ function AppBody() {
         {activeTab === 'focus' ? <FocusScreen /> : null}
         {activeTab === 'week' ? <WeekScreen /> : null}
         {activeTab === 'profile' ? <ProfileScreen /> : null}
+        {activeTab === 'expenses' ? <ExpensesScreen /> : null}
+        {activeTab === 'workouts' ? <WorkoutsScreen /> : null}
       </main>
 
       <nav className="fixed inset-x-0 bottom-0 mx-auto flex max-w-md gap-2 border-t border-white/6 bg-[var(--tg-bg-color)]/92 px-4 pb-[calc(14px+env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl">

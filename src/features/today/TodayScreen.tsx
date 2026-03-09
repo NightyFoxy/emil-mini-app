@@ -3,13 +3,13 @@ import { ru } from 'date-fns/locale';
 
 import { Card, Chip, PrimaryButton, Screen, SectionTitle, SegmentedControl } from '@/components/ui';
 import { useAppStore } from '@/app/store';
-import type { EnergyPattern, TaskItem, TodayMode } from '@/types/models';
+import type { ReminderWindow, TaskItem, TodayMode } from '@/types/models';
 
-const energyOptions: Array<{ value: EnergyPattern; label: string }> = [
+const energyOptions: Array<{ value: ReminderWindow; label: string }> = [
   { value: 'morning', label: 'Утро' },
-  { value: 'daytime', label: 'День' },
+  { value: 'day', label: 'День' },
   { value: 'evening', label: 'Вечер' },
-  { value: 'unstable', label: 'Нестабильно' },
+  { value: 'before_sleep', label: 'Позже' },
 ];
 
 const modeOptions: Array<{ value: TodayMode; label: string }> = [

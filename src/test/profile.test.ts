@@ -7,11 +7,11 @@ describe('onboardingAnswersSchema', () => {
     expect(() => onboardingAnswersSchema.parse(demoAnswers)).not.toThrow();
   });
 
-  it('rejects empty goals', () => {
+  it('rejects invalid special preferences length', () => {
     expect(() =>
       onboardingAnswersSchema.parse({
         ...demoAnswers,
-        goals: [],
+        specialPreferences: 'x'.repeat(281),
       }),
     ).toThrow();
   });
@@ -22,8 +22,9 @@ describe('generateOperationalProfile', () => {
     const profile = generateOperationalProfile(demoAnswers, new Date('2026-03-09T08:00:00.000Z'));
 
     expect(profile.profileVersion).toBe('1.0.0');
-    expect(profile.reminderTime).toBe('21:30');
-    expect(profile.assistantRules).toContain('Показывай связь между днём и недельными приоритетами.');
-    expect(profile.llmProfileSummary).toContain('Тон контроля: прямой тон.');
+    expect(profile.reminderWindow).toBe('evening');
+    expect(profile.firstScreen).toBe('today');
+    expect(profile.assistantRules).toContain('Подавай ответы коротким списком.');
+    expect(profile.llmProfileSummary).toContain('Главная польза от Эмиля: план на день.');
   });
 });
