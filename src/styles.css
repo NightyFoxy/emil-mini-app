@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light;
+  --tg-bg-color: #f2f5f9;
+  --tg-secondary-bg-color: #ffffff;
+  --tg-section-bg-color: #ffffff;
+  --tg-text-color: #152033;
+  --tg-hint-color: #64748b;
+  --tg-link-color: #2563eb;
+  --tg-button-color: #152033;
+  --tg-button-text-color: #f8fbff;
+  --tg-destructive-text-color: #dc2626;
+  --tg-section-header-text-color: #334155;
+  --tg-subtitle-text-color: #64748b;
+  --tg-accent-text-color: #1d4ed8;
+  --card-bg: color-mix(in srgb, var(--tg-secondary-bg-color) 86%, transparent);
+  font-family: "Manrope", "Segoe UI", sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(61, 90, 128, 0.14), transparent 32%),
+    radial-gradient(circle at top right, rgba(148, 163, 184, 0.18), transparent 28%),
+    var(--tg-bg-color);
+  color: var(--tg-text-color);
+}
+
+:root[data-scheme='dark'] {
+  color-scheme: dark;
+  --card-bg: color-mix(in srgb, var(--tg-secondary-bg-color) 78%, rgba(15, 23, 42, 0.2));
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: inherit;
+  color: inherit;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+#root {
+  min-height: 100vh;
+}
