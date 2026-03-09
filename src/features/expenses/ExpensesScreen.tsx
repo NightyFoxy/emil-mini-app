@@ -2,7 +2,7 @@ import { Card, PrimaryButton, Screen, SectionTitle } from '@/components/ui';
 import { useAppStore } from '@/app/store';
 
 export function ExpensesScreen() {
-  const expenses = useAppStore((state) => state.expenses);
+  const expenses = useAppStore((state) => state.expenses ?? []);
   const setActiveTab = useAppStore((state) => state.setActiveTab);
   const total = expenses.reduce((sum, item) => sum + item.amount, 0);
 

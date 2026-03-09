@@ -2,7 +2,7 @@ import { Card, PrimaryButton, Screen, SectionTitle } from '@/components/ui';
 import { useAppStore } from '@/app/store';
 
 export function WorkoutsScreen() {
-  const workouts = useAppStore((state) => state.workouts);
+  const workouts = useAppStore((state) => state.workouts ?? []);
   const setActiveTab = useAppStore((state) => state.setActiveTab);
 
   return (

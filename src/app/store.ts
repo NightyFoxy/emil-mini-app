@@ -26,6 +26,46 @@ function isCompatibleSnapshot(snapshot: AppStateSnapshot | null): snapshot is Ap
   return Boolean(snapshot.onboardingAnswers?.startArea && snapshot.profile?.firstScreen);
 }
 
+function normalizeSnapshot(snapshot: AppStateSnapshot): AppStateSnapshot {
+  const base = createDemoState();
+
+  if (!snapshot.onboardingCompleted || !snapshot.onboardingAnswers) {
+    return {
+      ...base,
+      ...snapshot,
+      expenses: snapshot.expenses ?? base.expenses,
+      workouts: snapshot.workouts ?? base.workouts,
+      tasks: snapshot.tasks ?? base.tasks,
+      weeklyReview: snapshot.weeklyReview ?? base.weeklyReview,
+      todayMode: snapshot.todayMode ?? base.todayMode,
+      todayEnergy: snapshot.todayEnergy ?? base.todayEnergy,
+      activeTab: snapshot.activeTab ?? base.activeTab,
+    };
+  }
+
+  const regeneratedProfile = generateOperationalProfile(snapshot.onboardingAnswers);
+
+  return {
+    ...base,
+    ...snapshot,
+    profile: {
+      ...regeneratedProfile,
+      ...snapshot.profile,
+      practicalTags: snapshot.profile?.practicalTags ?? regeneratedProfile.practicalTags,
+      assistantRules: snapshot.profile?.assistantRules ?? regeneratedProfile.assistantRules,
+      llmProfileSummary: snapshot.profile?.llmProfileSummary ?? regeneratedProfile.llmProfileSummary,
+      firstScreen: snapshot.profile?.firstScreen ?? regeneratedProfile.firstScreen,
+    },
+    expenses: snapshot.expenses ?? base.expenses,
+    workouts: snapshot.workouts ?? base.workouts,
+    tasks: snapshot.tasks ?? base.tasks,
+    weeklyReview: snapshot.weeklyReview ?? base.weeklyReview,
+    todayMode: snapshot.todayMode ?? base.todayMode,
+    todayEnergy: snapshot.todayEnergy ?? base.todayEnergy,
+    activeTab: snapshot.activeTab ?? regeneratedProfile.firstScreen,
+  };
+}
+
 const storage = createStorageAdapter();
 
 interface AppStore extends AppStateSnapshot {
@@ -102,7 +142,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       console.error('Failed to load app state', error);
     }
     const loaded = isCompatibleSnapshot(rawLoaded)
-      ? rawLoaded
+      ? normalizeSnapshot(rawLoaded)
       : import.meta.env.DEV
         ? createCompletedDemoState()
         : createDemoState();

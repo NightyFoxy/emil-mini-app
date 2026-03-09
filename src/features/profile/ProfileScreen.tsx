@@ -22,6 +22,9 @@ export function ProfileScreen() {
   }
 
   async function copy(text: string, key: string) {
+    if (!navigator.clipboard?.writeText) {
+      return;
+    }
     await navigator.clipboard.writeText(text);
     setCopied(key);
   }
@@ -61,7 +64,7 @@ export function ProfileScreen() {
       <Card className="space-y-4">
         <SectionTitle title="Практические теги" />
         <div className="space-y-2">
-          {profile.practicalTags.map((tag) => (
+          {(profile.practicalTags ?? []).map((tag) => (
             <div key={tag} className="rounded-[18px] bg-black/10 px-4 py-3 text-sm text-[var(--tg-text-color)]">
               {tag}
             </div>
@@ -72,7 +75,7 @@ export function ProfileScreen() {
       <Card className="space-y-4">
         <SectionTitle title="Assistant rules" />
         <div className="space-y-2">
-          {profile.assistantRules.map((rule) => (
+          {(profile.assistantRules ?? []).map((rule) => (
             <div key={rule} className="rounded-[18px] bg-black/10 px-4 py-3 text-sm text-[var(--tg-text-color)]">
               {rule}
             </div>
