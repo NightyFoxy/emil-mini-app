@@ -1,6 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 
 import { Card, PrimaryButton } from '@/components/ui';
+import { resetPersistedAppState } from '@/lib/storage/reset';
 
 interface Props {
   children: ReactNode;
@@ -32,7 +33,13 @@ export class ErrorBoundary extends Component<Props, State> {
                 Перезапустите экран. Если ошибка повторится, состояние уже не должно теряться.
               </div>
             </div>
-            <PrimaryButton onClick={() => window.location.reload()}>Перезапустить</PrimaryButton>
+            <PrimaryButton
+              onClick={() => {
+                void resetPersistedAppState().finally(() => window.location.reload());
+              }}
+            >
+              Сбросить и перезапустить
+            </PrimaryButton>
           </Card>
         </div>
       );

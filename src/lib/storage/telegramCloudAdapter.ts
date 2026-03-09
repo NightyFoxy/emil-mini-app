@@ -2,9 +2,9 @@ import type { AppStateSnapshot } from '@/types/models';
 import { getTelegramWebApp } from '@/lib/telegram/env';
 import type { StorageAdapter } from './types';
 
-const STORAGE_KEY = 'emil-mini-app-state';
-const MANIFEST_KEY = 'emil_state_manifest';
-const CHUNK_KEY_PREFIX = 'emil_state_';
+export const STORAGE_KEY = 'emil-mini-app-state';
+export const MANIFEST_KEY = 'emil_state_manifest';
+export const CHUNK_KEY_PREFIX = 'emil_state_';
 const CHUNK_SIZE = 3500;
 
 interface CloudManifest {

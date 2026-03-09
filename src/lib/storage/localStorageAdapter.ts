@@ -1,7 +1,7 @@
 import type { AppStateSnapshot } from '@/types/models';
 import type { StorageAdapter } from './types';
 
-const STORAGE_KEY = 'emil-mini-app-state';
+export const LOCAL_STORAGE_KEY = 'emil-mini-app-state';
 
 export function createLocalStorageAdapter(): StorageAdapter {
   return {
@@ -14,7 +14,7 @@ export function createLocalStorageAdapter(): StorageAdapter {
         return null;
       }
 
-      const raw = window.localStorage.getItem(STORAGE_KEY);
+      const raw = window.localStorage.getItem(LOCAL_STORAGE_KEY);
       if (!raw) {
         return null;
       }
@@ -26,7 +26,7 @@ export function createLocalStorageAdapter(): StorageAdapter {
         return;
       }
 
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
+      window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(snapshot));
     },
   };
 }
