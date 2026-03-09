@@ -63,7 +63,11 @@ async function persistState(state: AppStore) {
     activeTab: state.activeTab,
   };
 
-  await storage.save(snapshot);
+  try {
+    await storage.save(snapshot);
+  } catch (error) {
+    console.error('Failed to persist app state', error);
+  }
 }
 
 function reorderPriorityTasks(tasks: TaskItem[], taskId: string, direction: 'up' | 'down') {
@@ -91,7 +95,12 @@ export const useAppStore = create<AppStore>((set, get) => ({
   storageKind: storage.kind,
 
   async loadState() {
-    const rawLoaded = await storage.load();
+    let rawLoaded: AppStateSnapshot | null = null;
+    try {
+      rawLoaded = await storage.load();
+    } catch (error) {
+      console.error('Failed to load app state', error);
+    }
     const loaded = isCompatibleSnapshot(rawLoaded)
       ? rawLoaded
       : import.meta.env.DEV
