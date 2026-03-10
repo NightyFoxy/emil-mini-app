@@ -1,106 +1,133 @@
 import { create } from 'zustand';
 
-import { generateOperationalProfile } from '@/lib/profile/deriveProfile';
+import { buildProfile, buildSettingsFromAnswers } from '@/lib/profile/deriveProfile';
 import { createStorageAdapter } from '@/lib/storage';
 import type {
+  AppSettings,
   AppStateSnapshot,
-  OnboardingAnswers,
-  ReminderWindow,
-  TabId,
-  TaskBucket,
-  TaskItem,
-  TaskType,
-  TodayMode,
+  AppTab,
+  CalendarEntry,
+  ExpenseCategory,
+  ReminderOption,
+  SetupAnswers,
+  ExpenseEntry,
+  NoteEntry,
+  TaskEntry,
+  ToneOption,
+  WorkoutEntry,
+  WorkoutType,
 } from '@/types/models';
-import { createCompletedDemoState, createDemoState } from './seed';
-
-function isCompatibleSnapshot(snapshot: AppStateSnapshot | null): snapshot is AppStateSnapshot {
-  if (!snapshot) {
-    return false;
-  }
-
-  if (!snapshot.onboardingCompleted) {
-    return true;
-  }
-
-  return Boolean(snapshot.onboardingAnswers?.startArea && snapshot.profile?.firstScreen);
-}
-
-function normalizeSnapshot(snapshot: AppStateSnapshot): AppStateSnapshot {
-  const base = createDemoState();
-
-  if (!snapshot.onboardingCompleted || !snapshot.onboardingAnswers) {
-    return {
-      ...base,
-      ...snapshot,
-      expenses: snapshot.expenses ?? base.expenses,
-      workouts: snapshot.workouts ?? base.workouts,
-      tasks: snapshot.tasks ?? base.tasks,
-      weeklyReview: snapshot.weeklyReview ?? base.weeklyReview,
-      todayMode: snapshot.todayMode ?? base.todayMode,
-      todayEnergy: snapshot.todayEnergy ?? base.todayEnergy,
-      activeTab: snapshot.activeTab ?? base.activeTab,
-    };
-  }
-
-  const regeneratedProfile = generateOperationalProfile(snapshot.onboardingAnswers);
-
-  return {
-    ...base,
-    ...snapshot,
-    profile: {
-      ...regeneratedProfile,
-      ...snapshot.profile,
-      practicalTags: snapshot.profile?.practicalTags ?? regeneratedProfile.practicalTags,
-      assistantRules: snapshot.profile?.assistantRules ?? regeneratedProfile.assistantRules,
-      llmProfileSummary: snapshot.profile?.llmProfileSummary ?? regeneratedProfile.llmProfileSummary,
-      firstScreen: snapshot.profile?.firstScreen ?? regeneratedProfile.firstScreen,
-    },
-    expenses: snapshot.expenses ?? base.expenses,
-    workouts: snapshot.workouts ?? base.workouts,
-    tasks: snapshot.tasks ?? base.tasks,
-    weeklyReview: snapshot.weeklyReview ?? base.weeklyReview,
-    todayMode: snapshot.todayMode ?? base.todayMode,
-    todayEnergy: snapshot.todayEnergy ?? base.todayEnergy,
-    activeTab: snapshot.activeTab ?? regeneratedProfile.firstScreen,
-  };
-}
+import { createDemoState, createEmptyState } from './seed';
 
 const storage = createStorageAdapter();
 
-interface AppStore extends AppStateSnapshot {
-  initialized: boolean;
-  storageKind: string;
-  loadState: () => Promise<void>;
-  completeOnboarding: (answers: OnboardingAnswers) => Promise<void>;
-  setActiveTab: (tab: TabId) => void;
-  setTodayMode: (mode: TodayMode) => void;
-  setTodayEnergy: (energy: ReminderWindow | null) => void;
-  addTask: (input: {
-    title: string;
-    type: TaskType;
-    bucket: TaskBucket;
-    urgency: 'low' | 'medium' | 'high';
-    nextAction?: string;
-  }) => Promise<void>;
-  toggleTaskDone: (taskId: string) => Promise<void>;
-  movePriorityTask: (taskId: string, direction: 'up' | 'down') => Promise<void>;
-  updateProfileNotes: (patch: Pick<OnboardingAnswers, 'specialPreferences'>) => Promise<void>;
-  requestDemoReset: () => Promise<void>;
+function todayString() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function migrateLegacySnapshot(snapshot: Record<string, unknown>): AppStateSnapshot {
+  const base = createEmptyState();
+  const legacyEntries: CalendarEntry[] = [];
+
+  const tasks = Array.isArray(snapshot.tasks) ? snapshot.tasks : [];
+  for (const task of tasks) {
+    if (typeof task === 'object' && task && 'title' in task) {
+      const item = task as Record<string, unknown>;
+      legacyEntries.push({
+        id: String(item.id ?? crypto.randomUUID()),
+        type: 'task',
+        title: String(item.title ?? 'Задача'),
+        date: typeof item.dueDate === 'string' && item.dueDate ? item.dueDate.slice(0, 10) : todayString(),
+        note: typeof item.nextAction === 'string' ? item.nextAction : undefined,
+        time: undefined,
+        done: item.status === 'done',
+      });
+    }
+  }
+
+  const expenses = Array.isArray(snapshot.expenses) ? snapshot.expenses : [];
+  for (const expense of expenses) {
+    if (typeof expense === 'object' && expense) {
+      const item = expense as Record<string, unknown>;
+      legacyEntries.push({
+        id: String(item.id ?? crypto.randomUUID()),
+        type: 'expense',
+        title: String(item.title ?? 'Трата'),
+        amount: Number(item.amount ?? 0),
+        category: (item.category as ExpenseCategory) ?? 'Другое',
+        date: typeof item.createdAt === 'string' ? item.createdAt.slice(0, 10) : todayString(),
+        note: undefined,
+      });
+    }
+  }
+
+  const workouts = Array.isArray(snapshot.workouts) ? snapshot.workouts : [];
+  for (const workout of workouts) {
+    if (typeof workout === 'object' && workout) {
+      const item = workout as Record<string, unknown>;
+      legacyEntries.push({
+        id: String(item.id ?? crypto.randomUUID()),
+        type: 'workout',
+        title: String(item.title ?? 'Тренировка'),
+        durationMinutes: Number(item.durationMinutes ?? 20),
+        workoutType: (item.focus as WorkoutType) ?? 'Ходьба',
+        date: todayString(),
+        note: undefined,
+      });
+    }
+  }
+
+  return {
+    ...base,
+    setupCompleted: false,
+    entries: legacyEntries,
+    selectedDate: todayString(),
+  };
+}
+
+export function normalizeSnapshot(snapshot: unknown): AppStateSnapshot | null {
+  if (!snapshot || typeof snapshot !== 'object') {
+    return null;
+  }
+
+  const raw = snapshot as Record<string, unknown>;
+  if ('setupCompleted' in raw && Array.isArray(raw.entries)) {
+    const base = createEmptyState();
+    return {
+      ...base,
+      ...raw,
+      settings: {
+        ...base.settings,
+        ...(raw.settings as AppSettings | undefined),
+        modules: {
+          ...base.settings.modules,
+          ...((raw.settings as AppSettings | undefined)?.modules ?? {}),
+        },
+      },
+      entries: raw.entries as CalendarEntry[],
+      selectedDate: typeof raw.selectedDate === 'string' ? raw.selectedDate : todayString(),
+      activeTab: (raw.activeTab as AppTab) ?? 'calendar',
+      focusedTaskId: (raw.focusedTaskId as string | null) ?? null,
+    };
+  }
+
+  if ('tasks' in raw || 'expenses' in raw || 'workouts' in raw) {
+    return migrateLegacySnapshot(raw);
+  }
+
+  return null;
 }
 
 async function persistState(state: AppStore) {
   const snapshot: AppStateSnapshot = {
-    onboardingCompleted: state.onboardingCompleted,
-    onboardingAnswers: state.onboardingAnswers,
+    setupCompleted: state.setupCompleted,
+    setupAnswers: state.setupAnswers,
     profile: state.profile,
-    tasks: state.tasks,
-    weeklyReview: state.weeklyReview,
-    expenses: state.expenses,
-    workouts: state.workouts,
-    todayMode: state.todayMode,
-    todayEnergy: state.todayEnergy,
+    settings: state.settings,
+    entries: state.entries,
+    selectedDate: state.selectedDate,
     activeTab: state.activeTab,
+    focusedTaskId: state.focusedTaskId,
   };
 
   try {
@@ -110,56 +137,46 @@ async function persistState(state: AppStore) {
   }
 }
 
-function reorderPriorityTasks(tasks: TaskItem[], taskId: string, direction: 'up' | 'down') {
-  const priorities = tasks.filter((task) => task.bucket === 'priority');
-  const index = priorities.findIndex((task) => task.id === taskId);
-  if (index === -1) {
-    return tasks;
-  }
-
-  const swapIndex = direction === 'up' ? index - 1 : index + 1;
-  if (swapIndex < 0 || swapIndex >= priorities.length) {
-    return tasks;
-  }
-
-  const nextPriorities = [...priorities];
-  [nextPriorities[index], nextPriorities[swapIndex]] = [nextPriorities[swapIndex], nextPriorities[index]];
-
-  const others = tasks.filter((task) => task.bucket !== 'priority');
-  return [...nextPriorities, ...others];
+interface AppStore extends AppStateSnapshot {
+  initialized: boolean;
+  loadState: () => Promise<void>;
+  completeSetup: (answers: SetupAnswers) => Promise<void>;
+  setActiveTab: (tab: AppTab) => void;
+  setSelectedDate: (date: string) => void;
+  setFocusedTaskId: (taskId: string | null) => void;
+  addEntry: (input: Omit<TaskEntry, 'id'> | Omit<ExpenseEntry, 'id'> | Omit<WorkoutEntry, 'id'> | Omit<NoteEntry, 'id'>) => Promise<void>;
+  toggleTaskDone: (taskId: string) => Promise<void>;
+  updateSettings: (patch: Partial<AppSettings>) => Promise<void>;
+  rerunSetup: () => Promise<void>;
+  resetAllData: () => Promise<void>;
 }
 
 export const useAppStore = create<AppStore>((set, get) => ({
-  ...createDemoState(),
+  ...createEmptyState(),
   initialized: false,
-  storageKind: storage.kind,
 
   async loadState() {
-    let rawLoaded: AppStateSnapshot | null = null;
+    let loaded: AppStateSnapshot | null = null;
     try {
-      rawLoaded = await storage.load();
+      loaded = normalizeSnapshot(await storage.load());
     } catch (error) {
       console.error('Failed to load app state', error);
     }
-    const loaded = isCompatibleSnapshot(rawLoaded)
-      ? normalizeSnapshot(rawLoaded)
-      : import.meta.env.DEV
-        ? createCompletedDemoState()
-        : createDemoState();
+
     set({
-      ...loaded,
+      ...(loaded ?? (import.meta.env.DEV ? createDemoState() : createEmptyState())),
       initialized: true,
-      storageKind: storage.kind,
     });
   },
 
-  async completeOnboarding(answers) {
-    const profile = generateOperationalProfile(answers);
+  async completeSetup(answers) {
+    const profile = buildProfile(answers);
     set({
-      onboardingCompleted: true,
-      onboardingAnswers: answers,
+      setupCompleted: true,
+      setupAnswers: answers,
       profile,
-      activeTab: profile.firstScreen,
+      settings: buildSettingsFromAnswers(answers),
+      activeTab: 'calendar',
     });
     await persistState(get());
   },
@@ -169,60 +186,74 @@ export const useAppStore = create<AppStore>((set, get) => ({
     void persistState(get());
   },
 
-  setTodayMode(mode) {
-    set({ todayMode: mode });
+  setSelectedDate(date) {
+    set({ selectedDate: date });
     void persistState(get());
   },
 
-  setTodayEnergy(energy) {
-    set({ todayEnergy: energy });
+  setFocusedTaskId(taskId) {
+    set({ focusedTaskId: taskId });
     void persistState(get());
   },
 
-  async addTask(input) {
-    const task: TaskItem = {
-      id: crypto.randomUUID(),
-      status: 'todo',
+  async addEntry(input) {
+    const entry: CalendarEntry = {
       ...input,
-    };
-
-    set((state) => ({ tasks: [task, ...state.tasks] }));
+      id: crypto.randomUUID(),
+    } as CalendarEntry;
+    set((state) => ({
+      entries: [entry, ...state.entries],
+      focusedTaskId: entry.type === 'task' ? entry.id : state.focusedTaskId,
+      activeTab: 'calendar',
+      selectedDate: entry.date,
+    }));
     await persistState(get());
   },
 
   async toggleTaskDone(taskId) {
     set((state) => ({
-      tasks: state.tasks.map((task) =>
-        task.id === taskId ? { ...task, status: task.status === 'done' ? 'todo' : 'done' } : task,
+      entries: state.entries.map((entry) =>
+        entry.type === 'task' && entry.id === taskId ? { ...entry, done: !entry.done } : entry,
       ),
     }));
     await persistState(get());
   },
 
-  async movePriorityTask(taskId, direction) {
+  async updateSettings(patch) {
     set((state) => ({
-      tasks: reorderPriorityTasks(state.tasks, taskId, direction),
+      settings: {
+        ...state.settings,
+        ...patch,
+        modules: {
+          ...state.settings.modules,
+          ...(patch.modules ?? {}),
+        },
+      },
+      profile: state.profile
+        ? {
+            ...state.profile,
+            reminder: (patch.reminder as ReminderOption | undefined) ?? state.profile.reminder,
+            tone: (patch.tone as ToneOption | undefined) ?? state.profile.tone,
+            updatedAt: new Date().toISOString(),
+          }
+        : state.profile,
     }));
     await persistState(get());
   },
 
-  async updateProfileNotes(patch) {
-    const answers = get().onboardingAnswers;
-    if (!answers) {
-      return;
-    }
-
-    const nextAnswers = { ...answers, ...patch };
+  async rerunSetup() {
     set({
-      onboardingAnswers: nextAnswers,
-      profile: generateOperationalProfile(nextAnswers),
+      setupCompleted: false,
+      activeTab: 'calendar',
     });
     await persistState(get());
   },
 
-  async requestDemoReset() {
-    const state = createCompletedDemoState();
-    set({ ...state, initialized: true, storageKind: storage.kind });
+  async resetAllData() {
+    set({
+      ...createEmptyState(),
+      initialized: true,
+    });
     await persistState(get());
   },
 }));

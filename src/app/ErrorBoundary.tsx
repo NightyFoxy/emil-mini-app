@@ -1,7 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 
+import { useAppStore } from '@/app/store';
 import { Card, PrimaryButton } from '@/components/ui';
-import { resetPersistedAppState } from '@/lib/storage/reset';
 
 interface Props {
   children: ReactNode;
@@ -19,6 +19,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    useAppStore.setState({ activeTab: 'calendar' });
     console.error('App crashed', error, errorInfo);
   }
 
@@ -30,16 +31,10 @@ export class ErrorBoundary extends Component<Props, State> {
             <div className="space-y-2">
               <div className="text-lg font-semibold text-[var(--tg-text-color)]">Что-то пошло не так</div>
               <div className="text-sm text-[var(--tg-hint-color)]">
-                Перезапустите экран. Если ошибка повторится, состояние уже не должно теряться.
+                Перезагрузите экран. Данные не будут удалены.
               </div>
             </div>
-            <PrimaryButton
-              onClick={() => {
-                void resetPersistedAppState().finally(() => window.location.reload());
-              }}
-            >
-              Сбросить и перезапустить
-            </PrimaryButton>
+            <PrimaryButton onClick={() => window.location.reload()}>Перезагрузить экран</PrimaryButton>
           </Card>
         </div>
       );

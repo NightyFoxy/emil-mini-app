@@ -3,9 +3,9 @@ import clsx from 'clsx';
 
 export function Screen({ title, subtitle, children }: PropsWithChildren<{ title: string; subtitle?: string }>) {
   return (
-    <section className="space-y-4">
+    <section className="space-y-5">
       <header className="space-y-1 px-1">
-        <h1 className="text-[1.45rem] font-semibold tracking-[-0.03em] text-[var(--tg-text-color)]">{title}</h1>
+        <h1 className="text-[1.55rem] font-semibold tracking-[-0.03em] text-[var(--tg-text-color)]">{title}</h1>
         {subtitle ? <p className="text-sm text-[var(--tg-hint-color)]">{subtitle}</p> : null}
       </header>
       {children}
@@ -22,7 +22,7 @@ export function Card({
   return (
     <div
       className={clsx(
-        'rounded-[24px] border border-white/6 bg-[color:var(--card-bg)] p-4 shadow-[0_10px_30px_rgba(15,23,42,0.18)] backdrop-blur-sm',
+        'rounded-[24px] border border-black/5 bg-[color:var(--card-bg)] p-4 shadow-[0_6px_20px_rgba(15,23,42,0.08)]',
         className,
       )}
     >
@@ -34,7 +34,7 @@ export function Card({
 export function SectionTitle({ title, action }: { title: string; action?: ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-[var(--tg-hint-color)]">{title}</h2>
+      <h2 className="text-sm font-semibold text-[var(--tg-hint-color)]">{title}</h2>
       {action}
     </div>
   );

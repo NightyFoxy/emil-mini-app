@@ -1,89 +1,38 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 
 import { Card, PrimaryButton, TextInput } from '@/components/ui';
-import { onboardingAnswersSchema } from '@/lib/profile/schemas';
-import { requestTelegramWriteAccess } from '@/lib/telegram/env';
-import type { OnboardingAnswers } from '@/types/models';
+import { setupAnswersSchema } from '@/lib/profile/schemas';
+import type { SetupAnswers } from '@/types/models';
 import {
-  chaosPatternOptions,
-  primaryNeedOptions,
-  reminderWindowOptions,
-  responseStyleOptions,
-  startAreaOptions,
-  startupBundleOptions,
-  toneStyleOptions,
+  chaosOptions,
+  helpFormatOptions,
+  priorityOptions,
+  reminderOptions,
+  startupModuleOptions,
+  toneOptions,
 } from './config';
 
-const screensCount = 8;
+const totalScreens = 7;
 
-const initialAnswers: OnboardingAnswers = {
+const initialAnswers: SetupAnswers = {
   displayName: 'Пользователь',
-  startArea: 'tasks',
-  chaosPattern: 'too_many_tasks',
-  primaryNeed: 'daily_plan',
-  responseStyle: 'short_list',
-  toneStyle: 'calm',
-  reminderWindow: 'evening',
-  dailyPlanReminderEnabled: true,
-  startupBundle: 'today_plan',
-  specialPreferences: '',
+  priority: 'tasks',
+  chaosSource: 'too_many_tasks',
+  helpFormat: 'short_list',
+  tone: 'calm',
+  reminder: 'off',
+  startupModule: 'tasks',
+  note: '',
 };
 
-function ProgressBar({ current }: { current: number }) {
-  const progress = Math.round(((current + 1) / screensCount) * 100);
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.16em] text-[var(--tg-hint-color)]">
-        <span>Настройка</span>
-        <span>{current + 1} / {screensCount}</span>
-      </div>
-      <div className="rounded-full bg-white/6 p-1">
-        <div
-          className="h-2 rounded-full bg-[var(--tg-button-color)] transition-all duration-300"
-          style={{ width: `${progress}%` }}
-        />
-      </div>
-    </div>
-  );
-}
-
-function OptionGrid<T extends string>({
-  selected,
+function OptionButtons<T extends string>({
+  value,
   options,
-  onSelect,
+  onChange,
 }: {
-  selected: T;
+  value: T;
   options: Array<{ value: T; label: string }>;
-  onSelect: (value: T) => void;
-}) {
-  return (
-    <div className="grid grid-cols-2 gap-3">
-      {options.map((option) => (
-        <button
-          key={option.value}
-          type="button"
-          onClick={() => onSelect(option.value)}
-          className={`min-h-24 rounded-[24px] border px-4 py-4 text-left text-[15px] font-medium leading-5 transition active:scale-[0.99] ${
-            selected === option.value
-              ? 'border-[var(--tg-button-color)] bg-[var(--tg-button-color)] text-[var(--tg-button-text-color)]'
-              : 'border-white/8 bg-black/8 text-[var(--tg-text-color)]'
-          }`}
-        >
-          {option.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function OptionList<T extends string>({
-  selected,
-  options,
-  onSelect,
-}: {
-  selected: T;
-  options: Array<{ value: T; label: string }>;
-  onSelect: (value: T) => void;
+  onChange: (next: T) => void;
 }) {
   return (
     <div className="space-y-3">
@@ -91,11 +40,11 @@ function OptionList<T extends string>({
         <button
           key={option.value}
           type="button"
-          onClick={() => onSelect(option.value)}
-          className={`min-h-20 w-full rounded-[24px] border px-4 py-4 text-left text-[15px] font-medium leading-5 transition active:scale-[0.99] ${
-            selected === option.value
+          onClick={() => onChange(option.value)}
+          className={`min-h-20 w-full rounded-[24px] border px-4 py-4 text-left text-[15px] font-medium transition ${
+            value === option.value
               ? 'border-[var(--tg-button-color)] bg-[var(--tg-button-color)] text-[var(--tg-button-text-color)]'
-              : 'border-white/8 bg-black/8 text-[var(--tg-text-color)]'
+              : 'border-white/8 bg-white/5 text-[var(--tg-text-color)]'
           }`}
         >
           {option.label}
@@ -110,181 +59,125 @@ export function OnboardingFlow({
   onComplete,
 }: {
   displayName: string;
-  onComplete: (answers: OnboardingAnswers) => Promise<void>;
+  onComplete: (answers: SetupAnswers) => Promise<void>;
 }) {
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
-  const [answers, setAnswers] = useState<OnboardingAnswers>({ ...initialAnswers, displayName });
+  const [answers, setAnswers] = useState<SetupAnswers>({ ...initialAnswers, displayName });
 
-  const canSkip = useMemo(() => step === 7, [step]);
-
-  function next() {
-    setStep((current) => Math.min(current + 1, screensCount - 1));
-  }
-
-  function back() {
-    setStep((current) => Math.max(current - 1, 0));
-  }
+  const progress = Math.round(((step + 1) / totalScreens) * 100);
 
   async function finish() {
-    const validated = onboardingAnswersSchema.parse({
-      ...answers,
-      specialPreferences: answers.specialPreferences.trim(),
-    });
     setSubmitting(true);
-    await onComplete(validated);
+    await onComplete(setupAnswersSchema.parse(answers));
     setSubmitting(false);
   }
 
   return (
     <div className="space-y-4">
-      <ProgressBar current={step} />
+      <div className="space-y-2">
+        <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.16em] text-[var(--tg-hint-color)]">
+          <span>Настройка</span>
+          <span>{step + 1} / {totalScreens}</span>
+        </div>
+        <div className="rounded-full bg-white/6 p-1">
+          <div className="h-2 rounded-full bg-[var(--tg-button-color)] transition-all" style={{ width: `${progress}%` }} />
+        </div>
+      </div>
 
       <Card className="space-y-5 p-5">
         {step === 0 ? (
           <>
-            <div className="space-y-2">
-              <h1 className="text-[1.9rem] font-semibold tracking-[-0.04em] text-[var(--tg-text-color)]">С чего начнём?</h1>
-              <p className="text-sm text-[var(--tg-hint-color)]">Выбери, что хочешь наладить в первую очередь.</p>
-            </div>
-            <OptionGrid
-              selected={answers.startArea}
-              options={startAreaOptions}
-              onSelect={(value) => setAnswers((current) => ({ ...current, startArea: value }))}
+            <h1 className="text-[1.8rem] font-semibold tracking-[-0.04em] text-[var(--tg-text-color)]">
+              Что хочешь наладить в первую очередь?
+            </h1>
+            <OptionButtons
+              value={answers.priority}
+              options={priorityOptions}
+              onChange={(value) => setAnswers((current) => ({ ...current, priority: value }))}
             />
           </>
         ) : null}
 
         {step === 1 ? (
           <>
-            <div className="space-y-2">
-              <h1 className="text-[1.9rem] font-semibold tracking-[-0.04em] text-[var(--tg-text-color)]">Где чаще всего начинается хаос?</h1>
-              <p className="text-sm text-[var(--tg-hint-color)]">Это поможет Эмилю быстрее быть полезным.</p>
-            </div>
-            <OptionList
-              selected={answers.chaosPattern}
-              options={chaosPatternOptions}
-              onSelect={(value) => setAnswers((current) => ({ ...current, chaosPattern: value }))}
+            <h1 className="text-[1.8rem] font-semibold tracking-[-0.04em] text-[var(--tg-text-color)]">
+              Где чаще всего начинается хаос?
+            </h1>
+            <OptionButtons
+              value={answers.chaosSource}
+              options={chaosOptions}
+              onChange={(value) => setAnswers((current) => ({ ...current, chaosSource: value }))}
             />
           </>
         ) : null}
 
         {step === 2 ? (
           <>
-            <div className="space-y-2">
-              <h1 className="text-[1.9rem] font-semibold tracking-[-0.04em] text-[var(--tg-text-color)]">Что тебе нужнее всего?</h1>
-              <p className="text-sm text-[var(--tg-hint-color)]">Выбери главную пользу от Эмиля.</p>
-            </div>
-            <OptionGrid
-              selected={answers.primaryNeed}
-              options={primaryNeedOptions}
-              onSelect={(value) => setAnswers((current) => ({ ...current, primaryNeed: value }))}
+            <h1 className="text-[1.8rem] font-semibold tracking-[-0.04em] text-[var(--tg-text-color)]">
+              Как тебе удобнее получать помощь?
+            </h1>
+            <OptionButtons
+              value={answers.helpFormat}
+              options={helpFormatOptions}
+              onChange={(value) => setAnswers((current) => ({ ...current, helpFormat: value }))}
             />
           </>
         ) : null}
 
         {step === 3 ? (
           <>
-            <div className="space-y-2">
-              <h1 className="text-[1.9rem] font-semibold tracking-[-0.04em] text-[var(--tg-text-color)]">Как тебе удобнее получать ответы?</h1>
-              <p className="text-sm text-[var(--tg-hint-color)]">Подстроим формат под тебя.</p>
-            </div>
-            <OptionList
-              selected={answers.responseStyle}
-              options={responseStyleOptions}
-              onSelect={(value) => setAnswers((current) => ({ ...current, responseStyle: value }))}
+            <h1 className="text-[1.8rem] font-semibold tracking-[-0.04em] text-[var(--tg-text-color)]">
+              Какой тон тебе подходит?
+            </h1>
+            <OptionButtons
+              value={answers.tone}
+              options={toneOptions}
+              onChange={(value) => setAnswers((current) => ({ ...current, tone: value }))}
             />
           </>
         ) : null}
 
         {step === 4 ? (
           <>
-            <div className="space-y-2">
-              <h1 className="text-[1.9rem] font-semibold tracking-[-0.04em] text-[var(--tg-text-color)]">Какой тон тебе подходит?</h1>
-              <p className="text-sm text-[var(--tg-hint-color)]">Эмиль будет вести тебя в этом стиле.</p>
-            </div>
-            <OptionGrid
-              selected={answers.toneStyle}
-              options={toneStyleOptions}
-              onSelect={(value) => setAnswers((current) => ({ ...current, toneStyle: value }))}
+            <h1 className="text-[1.8rem] font-semibold tracking-[-0.04em] text-[var(--tg-text-color)]">
+              Когда лучше напоминать?
+            </h1>
+            <OptionButtons
+              value={answers.reminder}
+              options={reminderOptions}
+              onChange={(value) => setAnswers((current) => ({ ...current, reminder: value }))}
             />
           </>
         ) : null}
 
         {step === 5 ? (
           <>
-            <div className="space-y-2">
-              <h1 className="text-[1.9rem] font-semibold tracking-[-0.04em] text-[var(--tg-text-color)]">Когда лучше напоминать?</h1>
-              <p className="text-sm text-[var(--tg-hint-color)]">Настроим удобный ритм.</p>
-            </div>
-            <OptionList
-              selected={answers.reminderWindow}
-              options={reminderWindowOptions}
-              onSelect={(value) => setAnswers((current) => ({ ...current, reminderWindow: value }))}
+            <h1 className="text-[1.8rem] font-semibold tracking-[-0.04em] text-[var(--tg-text-color)]">
+              Что включить сразу?
+            </h1>
+            <OptionButtons
+              value={answers.startupModule}
+              options={startupModuleOptions}
+              onChange={(value) => setAnswers((current) => ({ ...current, startupModule: value }))}
             />
-            <div className="rounded-[24px] border border-white/8 bg-black/8 p-4">
-              <div className="text-sm font-medium text-[var(--tg-text-color)]">Включить ежедневное напоминание про план на завтра?</div>
-              <div className="mt-3 grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={async () => {
-                    if (answers.reminderWindow !== 'on_demand') {
-                      await requestTelegramWriteAccess();
-                    }
-                    setAnswers((current) => ({ ...current, dailyPlanReminderEnabled: true }));
-                  }}
-                  className={`rounded-[20px] px-4 py-3 text-sm font-medium ${
-                    answers.dailyPlanReminderEnabled
-                      ? 'bg-[var(--tg-button-color)] text-[var(--tg-button-text-color)]'
-                      : 'bg-white/6 text-[var(--tg-text-color)]'
-                  }`}
-                >
-                  Да
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAnswers((current) => ({ ...current, dailyPlanReminderEnabled: false }))}
-                  className={`rounded-[20px] px-4 py-3 text-sm font-medium ${
-                    !answers.dailyPlanReminderEnabled
-                      ? 'bg-[var(--tg-button-color)] text-[var(--tg-button-text-color)]'
-                      : 'bg-white/6 text-[var(--tg-text-color)]'
-                  }`}
-                >
-                  Нет
-                </button>
-              </div>
-            </div>
           </>
         ) : null}
 
         {step === 6 ? (
           <>
             <div className="space-y-2">
-              <h1 className="text-[1.9rem] font-semibold tracking-[-0.04em] text-[var(--tg-text-color)]">Что включить сразу?</h1>
-              <p className="text-sm text-[var(--tg-hint-color)]">Выбери стартовый набор.</p>
-            </div>
-            <OptionGrid
-              selected={answers.startupBundle}
-              options={startupBundleOptions}
-              onSelect={(value) => setAnswers((current) => ({ ...current, startupBundle: value }))}
-            />
-          </>
-        ) : null}
-
-        {step === 7 ? (
-          <>
-            <div className="space-y-2">
-              <h1 className="text-[1.9rem] font-semibold tracking-[-0.04em] text-[var(--tg-text-color)]">Есть что-то важное?</h1>
-              <p className="text-sm text-[var(--tg-hint-color)]">
-                Можно написать, если у тебя есть особые пожелания.
-              </p>
+              <h1 className="text-[1.8rem] font-semibold tracking-[-0.04em] text-[var(--tg-text-color)]">
+                Есть что-то важное, что стоит учитывать?
+              </h1>
+              <p className="text-sm text-[var(--tg-hint-color)]">Можно пропустить.</p>
             </div>
             <TextInput
-              value={answers.specialPreferences}
-              onChange={(value) => setAnswers((current) => ({ ...current, specialPreferences: value }))}
-              placeholder="Например: не люблю длинные ответы, вечером мало сил, часто забываю бытовые дела"
+              value={answers.note}
+              onChange={(value) => setAnswers((current) => ({ ...current, note: value }))}
+              placeholder="Например: вечером мало сил"
               multiline
-              maxLength={280}
+              maxLength={240}
             />
             <PrimaryButton onClick={() => void finish()} disabled={submitting}>
               Завершить
@@ -292,22 +185,20 @@ export function OnboardingFlow({
           </>
         ) : null}
 
-        {step < 7 ? (
-          <div className="mt-2 flex gap-3">
+        {step < 6 ? (
+          <div className="flex gap-3 pt-2">
             <button
               type="button"
-              onClick={back}
+              onClick={() => setStep((current) => Math.max(current - 1, 0))}
               className="flex-1 rounded-[20px] border border-white/8 px-4 py-3 text-sm text-[var(--tg-text-color)]"
             >
               Назад
             </button>
-            <PrimaryButton className="flex-1" onClick={next}>
+            <PrimaryButton className="flex-1" onClick={() => setStep((current) => Math.min(current + 1, 6))}>
               Дальше
             </PrimaryButton>
           </div>
-        ) : null}
-
-        {canSkip ? (
+        ) : (
           <button
             type="button"
             onClick={() => void finish()}
@@ -315,7 +206,7 @@ export function OnboardingFlow({
           >
             Пропустить
           </button>
-        ) : null}
+        )}
       </Card>
     </div>
   );

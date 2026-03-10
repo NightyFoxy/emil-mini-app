@@ -1,174 +1,109 @@
-export const ONBOARDING_START_AREAS = [
-  'tasks',
-  'routine',
-  'expenses',
-  'workouts',
-  'all',
-  'explore',
-] as const;
+export const APP_TABS = ['calendar', 'capture', 'focus', 'settings'] as const;
 
-export const CHAOS_PATTERNS = [
+export const SETUP_PRIORITIES = ['tasks', 'routine', 'expenses', 'workouts', 'all'] as const;
+export const CHAOS_SOURCES = [
   'too_many_tasks',
   'forget_important',
   'hard_to_start',
   'procrastination',
   'keeping_in_head',
-  'no_routine',
 ] as const;
+export const HELP_FORMATS = ['very_short', 'short_list', 'step_by_step'] as const;
+export const TONE_OPTIONS = ['calm', 'business', 'tough'] as const;
+export const REMINDER_OPTIONS = ['morning', 'day', 'evening', 'off'] as const;
+export const STARTUP_MODULES = ['tasks', 'expenses', 'workouts', 'all_core'] as const;
 
-export const PRIMARY_NEEDS = [
-  'daily_plan',
-  'reminders',
-  'step_breakdown',
-  'task_control',
-  'expense_tracking',
-  'workout_plan',
-] as const;
+export const ENTRY_TYPES = ['task', 'expense', 'workout', 'note'] as const;
+export const EXPENSE_CATEGORIES = ['Дом', 'Еда', 'Транспорт', 'Здоровье', 'Другое'] as const;
+export const WORKOUT_TYPES = ['Силовая', 'Кардио', 'Растяжка', 'Ходьба'] as const;
 
-export const RESPONSE_STYLES = [
-  'very_short',
-  'short_list',
-  'step_by_step',
-  'table',
-  'situational',
-] as const;
+export type AppTab = (typeof APP_TABS)[number];
+export type SetupPriority = (typeof SETUP_PRIORITIES)[number];
+export type ChaosSource = (typeof CHAOS_SOURCES)[number];
+export type HelpFormat = (typeof HELP_FORMATS)[number];
+export type ToneOption = (typeof TONE_OPTIONS)[number];
+export type ReminderOption = (typeof REMINDER_OPTIONS)[number];
+export type StartupModule = (typeof STARTUP_MODULES)[number];
+export type EntryType = (typeof ENTRY_TYPES)[number];
+export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
+export type WorkoutType = (typeof WORKOUT_TYPES)[number];
 
-export const TONE_STYLES = [
-  'soft',
-  'calm',
-  'business',
-  'tough',
-] as const;
-
-export const REMINDER_WINDOWS = [
-  'morning',
-  'day',
-  'evening',
-  'before_sleep',
-  'on_demand',
-] as const;
-
-export const STARTUP_BUNDLES = [
-  'today_plan',
-  'reminders',
-  'expenses',
-  'workouts',
-  'all_core',
-] as const;
-
-export const TABS = ['today', 'inbox', 'focus', 'week', 'profile', 'expenses', 'workouts'] as const;
-
-export const TODAY_MODES = ['overloaded', 'normal', 'focused'] as const;
-export const TASK_TYPES = ['task', 'thought', 'worry', 'idea', 'later'] as const;
-export const TASK_STATUSES = ['todo', 'done'] as const;
-export const TASK_BUCKETS = ['priority', 'secondary', 'backlog'] as const;
-
-export type OnboardingStartArea = (typeof ONBOARDING_START_AREAS)[number];
-export type ChaosPattern = (typeof CHAOS_PATTERNS)[number];
-export type PrimaryNeed = (typeof PRIMARY_NEEDS)[number];
-export type ResponseStyle = (typeof RESPONSE_STYLES)[number];
-export type ToneStyle = (typeof TONE_STYLES)[number];
-export type ReminderWindow = (typeof REMINDER_WINDOWS)[number];
-export type StartupBundle = (typeof STARTUP_BUNDLES)[number];
-export type TabId = (typeof TABS)[number];
-export type TodayMode = (typeof TODAY_MODES)[number];
-export type TaskType = (typeof TASK_TYPES)[number];
-export type TaskStatus = (typeof TASK_STATUSES)[number];
-export type TaskBucket = (typeof TASK_BUCKETS)[number];
-
-export interface OnboardingAnswers {
+export interface SetupAnswers {
   displayName: string;
-  startArea: OnboardingStartArea;
-  chaosPattern: ChaosPattern;
-  primaryNeed: PrimaryNeed;
-  responseStyle: ResponseStyle;
-  toneStyle: ToneStyle;
-  reminderWindow: ReminderWindow;
-  dailyPlanReminderEnabled: boolean;
-  startupBundle: StartupBundle;
-  specialPreferences: string;
+  priority: SetupPriority;
+  chaosSource: ChaosSource;
+  helpFormat: HelpFormat;
+  tone: ToneOption;
+  reminder: ReminderOption;
+  startupModule: StartupModule;
+  note: string;
 }
 
-export interface OperationalProfile {
-  profileVersion: '1.0.0';
+export interface AppSettings {
+  reminder: ReminderOption;
+  tone: ToneOption;
+  modules: {
+    expenses: boolean;
+    workouts: boolean;
+  };
+}
+
+export interface UserProfile {
+  version: '2.0.0';
   displayName: string;
-  startArea: OnboardingStartArea;
-  chaosPattern: ChaosPattern;
-  primaryNeed: PrimaryNeed;
-  responseStyle: ResponseStyle;
-  toneStyle: ToneStyle;
-  reminderWindow: ReminderWindow;
-  dailyPlanReminderEnabled: boolean;
-  startupBundle: StartupBundle;
-  specialPreferences: string;
-  firstScreen: TabId;
-  practicalTags: string[];
-  assistantRules: string[];
-  llmProfileSummary: string;
+  priority: SetupPriority;
+  chaosSource: ChaosSource;
+  helpFormat: HelpFormat;
+  tone: ToneOption;
+  reminder: ReminderOption;
+  startupModule: StartupModule;
+  note: string;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface TaskItem {
+export interface CalendarEntryBase {
   id: string;
+  date: string;
+  type: EntryType;
+  note?: string;
+}
+
+export interface TaskEntry extends CalendarEntryBase {
+  type: 'task';
   title: string;
-  type: TaskType;
-  status: TaskStatus;
-  bucket: TaskBucket;
-  notes?: string;
-  urgency: 'low' | 'medium' | 'high';
-  nextAction?: string;
-  estimatedMinutes?: number;
-  dueDate?: string;
+  time?: string;
+  done: boolean;
 }
 
-export interface InboxDraftSuggestion {
-  title: string;
-  type: TaskType;
-  urgency: 'low' | 'medium' | 'high';
-  nextAction: string;
-}
-
-export interface WeeklyRoutine {
-  id: string;
-  title: string;
-  cadence: string;
-  status: 'on_track' | 'at_risk';
-}
-
-export interface WeeklyReviewState {
-  weeklyPriorities: string[];
-  whatIsMoving: string[];
-  whatIsStuck: string[];
-  whatShouldBeCut: string[];
-  routines: WeeklyRoutine[];
-}
-
-export interface ExpenseItem {
-  id: string;
+export interface ExpenseEntry extends CalendarEntryBase {
+  type: 'expense';
   title: string;
   amount: number;
-  category: 'home' | 'food' | 'transport' | 'health' | 'other';
-  createdAt: string;
+  category: ExpenseCategory;
 }
 
-export interface WorkoutItem {
-  id: string;
+export interface WorkoutEntry extends CalendarEntryBase {
+  type: 'workout';
   title: string;
-  status: 'planned' | 'done';
   durationMinutes: number;
-  focus: 'strength' | 'cardio' | 'mobility' | 'walk';
+  workoutType: WorkoutType;
 }
+
+export interface NoteEntry extends CalendarEntryBase {
+  type: 'note';
+  title: string;
+}
+
+export type CalendarEntry = TaskEntry | ExpenseEntry | WorkoutEntry | NoteEntry;
 
 export interface AppStateSnapshot {
-  onboardingCompleted: boolean;
-  onboardingAnswers: OnboardingAnswers | null;
-  profile: OperationalProfile | null;
-  tasks: TaskItem[];
-  weeklyReview: WeeklyReviewState;
-  expenses: ExpenseItem[];
-  workouts: WorkoutItem[];
-  todayMode: TodayMode;
-  todayEnergy: ReminderWindow | null;
-  activeTab: TabId;
+  setupCompleted: boolean;
+  setupAnswers: SetupAnswers | null;
+  profile: UserProfile | null;
+  settings: AppSettings;
+  entries: CalendarEntry[];
+  selectedDate: string;
+  activeTab: AppTab;
+  focusedTaskId: string | null;
 }

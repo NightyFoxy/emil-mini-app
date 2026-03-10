@@ -2,31 +2,27 @@ import { useEffect } from 'react';
 
 import { useAppStore } from './store';
 import { applyTelegramTheme } from '@/lib/telegram/theme';
-import { ensureTelegramEnvironment, getTelegramUserDisplayName, isTelegramRuntime, signalReady } from '@/lib/telegram/env';
+import { ensureTelegramEnvironment, getTelegramUserDisplayName, signalReady } from '@/lib/telegram/env';
 import { OnboardingFlow } from '@/features/onboarding/OnboardingFlow';
-import { TodayScreen } from '@/features/today/TodayScreen';
-import { InboxScreen } from '@/features/inbox/InboxScreen';
+import { CalendarScreen } from '@/features/calendar/CalendarScreen';
+import { CaptureScreen } from '@/features/capture/CaptureScreen';
 import { FocusScreen } from '@/features/focus/FocusScreen';
-import { WeekScreen } from '@/features/week/WeekScreen';
-import { ProfileScreen } from '@/features/profile/ProfileScreen';
-import { ExpensesScreen } from '@/features/expenses/ExpensesScreen';
-import { WorkoutsScreen } from '@/features/workouts/WorkoutsScreen';
+import { SettingsScreen } from '@/features/settings/SettingsScreen';
 import { Card } from '@/components/ui';
-import type { TabId } from '@/types/models';
+import type { AppTab } from '@/types/models';
 
-const tabs: Array<{ id: TabId; label: string }> = [
-  { id: 'today', label: 'Сегодня' },
-  { id: 'inbox', label: 'Входящее' },
+const tabs: Array<{ id: AppTab; label: string }> = [
+  { id: 'calendar', label: 'Календарь' },
+  { id: 'capture', label: 'Добавить' },
   { id: 'focus', label: 'Фокус' },
-  { id: 'week', label: 'Неделя' },
-  { id: 'profile', label: 'Профиль' },
+  { id: 'settings', label: 'Настройки' },
 ];
 
 function AppBody() {
   const initialized = useAppStore((state) => state.initialized);
-  const onboardingCompleted = useAppStore((state) => state.onboardingCompleted);
+  const setupCompleted = useAppStore((state) => state.setupCompleted);
   const activeTab = useAppStore((state) => state.activeTab);
-  const completeOnboarding = useAppStore((state) => state.completeOnboarding);
+  const completeSetup = useAppStore((state) => state.completeSetup);
   const setActiveTab = useAppStore((state) => state.setActiveTab);
 
   useEffect(() => {
@@ -48,10 +44,10 @@ function AppBody() {
     );
   }
 
-  if (!onboardingCompleted) {
+  if (!setupCompleted) {
     return (
       <div className="mx-auto min-h-dvh w-full max-w-md px-4 pb-[calc(24px+env(safe-area-inset-bottom))] pt-[calc(20px+env(safe-area-inset-top))]">
-        <OnboardingFlow displayName={getTelegramUserDisplayName()} onComplete={completeOnboarding} />
+        <OnboardingFlow displayName={getTelegramUserDisplayName()} onComplete={completeSetup} />
       </div>
     );
   }
@@ -59,13 +55,10 @@ function AppBody() {
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 pb-[calc(92px+env(safe-area-inset-bottom))] pt-[calc(16px+env(safe-area-inset-top))]">
       <main className="flex-1">
-        {activeTab === 'today' ? <TodayScreen /> : null}
-        {activeTab === 'inbox' ? <InboxScreen /> : null}
+        {activeTab === 'calendar' ? <CalendarScreen /> : null}
+        {activeTab === 'capture' ? <CaptureScreen /> : null}
         {activeTab === 'focus' ? <FocusScreen /> : null}
-        {activeTab === 'week' ? <WeekScreen /> : null}
-        {activeTab === 'profile' ? <ProfileScreen /> : null}
-        {activeTab === 'expenses' ? <ExpensesScreen /> : null}
-        {activeTab === 'workouts' ? <WorkoutsScreen /> : null}
+        {activeTab === 'settings' ? <SettingsScreen /> : null}
       </main>
 
       <nav className="fixed inset-x-0 bottom-0 mx-auto flex max-w-md gap-2 border-t border-white/6 bg-[var(--tg-bg-color)]/92 px-4 pb-[calc(14px+env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl">
@@ -84,12 +77,6 @@ function AppBody() {
           </button>
         ))}
       </nav>
-
-      {import.meta.env.DEV && !isTelegramRuntime() ? (
-        <div className="fixed right-4 top-4 rounded-full border border-white/10 bg-black/20 px-3 py-1 text-[11px] text-[var(--tg-hint-color)]">
-          browser dev mode
-        </div>
-      ) : null}
     </div>
   );
 }
