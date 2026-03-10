@@ -1,4 +1,4 @@
-import type { AppStateSnapshot } from '@/types/models';
+import type { AppShellState } from '@/types/models';
 import { getTelegramWebApp } from '@/lib/telegram/env';
 import type { StorageAdapter } from './types';
 
@@ -70,11 +70,11 @@ export function createTelegramCloudAdapter(): StorageAdapter {
           Array.from({ length: manifest.chunks }, (_, index) => getItem(`${CHUNK_KEY_PREFIX}${index}`)),
         );
         const raw = parts.join('');
-        return raw ? (JSON.parse(raw) as AppStateSnapshot) : null;
+        return raw ? (JSON.parse(raw) as AppShellState) : null;
       }
 
       const legacyRaw = await getItem(STORAGE_KEY);
-      return legacyRaw ? (JSON.parse(legacyRaw) as AppStateSnapshot) : null;
+      return legacyRaw ? (JSON.parse(legacyRaw) as AppShellState) : null;
     },
     async save(snapshot) {
       if (!this.isAvailable()) {

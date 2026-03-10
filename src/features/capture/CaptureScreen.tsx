@@ -2,43 +2,50 @@ import { useState } from 'react';
 
 import { useAppStore } from '@/app/store';
 import { Card, PrimaryButton, Screen, TextInput } from '@/components/ui';
-import type { EntryType, ExpenseCategory, WorkoutType } from '@/types/models';
+import type { PlannerItemType } from '@/types/models';
 
-const expenseCategories: ExpenseCategory[] = ['Дом', 'Еда', 'Транспорт', 'Здоровье', 'Другое'];
-const workoutTypes: WorkoutType[] = ['Силовая', 'Кардио', 'Растяжка', 'Ходьба'];
+const typeOptions: Array<{ value: PlannerItemType; label: string }> = [
+  { value: 'task', label: 'Задача' },
+  { value: 'event', label: 'Событие' },
+  { value: 'expense', label: 'Трата' },
+  { value: 'workout', label: 'Тренировка' },
+];
 
 export function CaptureScreen() {
   const selectedDate = useAppStore((state) => state.selectedDate);
-  const addEntry = useAppStore((state) => state.addEntry);
-  const settings = useAppStore((state) => state.settings);
-  const [type, setType] = useState<EntryType>('task');
+  const setSelectedDate = useAppStore((state) => state.setSelectedDate);
+  const addPlannerItem = useAppStore((state) => state.addPlannerItem);
+  const [type, setType] = useState<PlannerItemType>('task');
   const [title, setTitle] = useState('');
   const [time, setTime] = useState('');
   const [note, setNote] = useState('');
   const [amount, setAmount] = useState('');
-  const [category, setCategory] = useState<ExpenseCategory>('Еда');
-  const [durationMinutes, setDurationMinutes] = useState('30');
-  const [workoutType, setWorkoutType] = useState<WorkoutType>('Ходьба');
+  const [category, setCategory] = useState('Еда');
+  const [duration, setDuration] = useState('');
+
+  const today = new Date().toISOString().slice(0, 10);
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
 
   return (
-    <Screen title="Добавить" subtitle={`Дата: ${selectedDate}`}>
+    <Screen title="Добавить" subtitle="Быстрое добавление в общий план">
       <Card className="space-y-4">
+        <div className="flex gap-2">
+          <button type="button" onClick={() => void setSelectedDate(today)} className="rounded-full bg-white px-4 py-2 text-sm text-[var(--tg-text-color)]">Сегодня</button>
+          <button type="button" onClick={() => void setSelectedDate(tomorrow)} className="rounded-full bg-white px-4 py-2 text-sm text-[var(--tg-text-color)]">Завтра</button>
+          <input type="date" value={selectedDate} onChange={(event) => void setSelectedDate(event.target.value)} className="min-w-0 flex-1 rounded-full bg-white px-4 py-2 text-sm text-[var(--tg-text-color)]" />
+        </div>
+
         <div className="grid grid-cols-2 gap-3">
-          {[
-            ['task', 'Задача'],
-            ['expense', 'Трата'],
-            ['workout', 'Тренировка'],
-            ['note', 'Заметка'],
-          ].map(([value, label]) => (
+          {typeOptions.map((option) => (
             <button
-              key={value}
+              key={option.value}
               type="button"
-              onClick={() => setType(value as EntryType)}
-              className={`rounded-[22px] px-4 py-4 text-sm font-medium ${
-                type === value ? 'bg-[var(--tg-button-color)] text-[var(--tg-button-text-color)]' : 'bg-white/5 text-[var(--tg-text-color)]'
+              onClick={() => setType(option.value)}
+              className={`rounded-[20px] px-4 py-4 text-sm font-medium ${
+                type === option.value ? 'bg-[var(--tg-button-color)] text-[var(--tg-button-text-color)]' : 'bg-white text-[var(--tg-text-color)]'
               }`}
             >
-              {label}
+              {option.label}
             </button>
           ))}
         </div>
@@ -46,98 +53,53 @@ export function CaptureScreen() {
         {type === 'task' ? (
           <div className="space-y-3">
             <TextInput value={title} onChange={setTitle} placeholder="Название задачи" />
-            <input
-              type="time"
-              value={time}
-              onChange={(event) => setTime(event.target.value)}
-              className="w-full rounded-[20px] border border-white/8 bg-white/5 px-4 py-3 text-sm text-[var(--tg-text-color)]"
-            />
-            <TextInput value={note} onChange={setNote} placeholder="Короткая заметка" multiline />
+            <input type="time" value={time} onChange={(event) => setTime(event.target.value)} className="w-full rounded-[20px] bg-white px-4 py-3 text-sm text-[var(--tg-text-color)]" />
+            <TextInput value={note} onChange={setNote} placeholder="Заметка" multiline />
+          </div>
+        ) : null}
+
+        {type === 'event' ? (
+          <div className="space-y-3">
+            <TextInput value={title} onChange={setTitle} placeholder="Название события" />
+            <input type="time" value={time} onChange={(event) => setTime(event.target.value)} className="w-full rounded-[20px] bg-white px-4 py-3 text-sm text-[var(--tg-text-color)]" />
+            <TextInput value={note} onChange={setNote} placeholder="Заметка" multiline />
           </div>
         ) : null}
 
         {type === 'expense' ? (
           <div className="space-y-3">
             <TextInput value={amount} onChange={setAmount} placeholder="Сумма" />
-            <div className="grid grid-cols-2 gap-3">
-              {expenseCategories.map((item) => (
-                <button
-                  key={item}
-                  type="button"
-                  onClick={() => setCategory(item)}
-                  className={`rounded-[20px] px-4 py-3 text-sm ${
-                    category === item ? 'bg-[var(--tg-button-color)] text-[var(--tg-button-text-color)]' : 'bg-white/5 text-[var(--tg-text-color)]'
-                  }`}
-                >
-                  {item}
-                </button>
-              ))}
-            </div>
+            <TextInput value={category} onChange={setCategory} placeholder="Категория" />
             <TextInput value={note} onChange={setNote} placeholder="Комментарий" multiline />
           </div>
         ) : null}
 
         {type === 'workout' ? (
           <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              {workoutTypes.map((item) => (
-                <button
-                  key={item}
-                  type="button"
-                  onClick={() => setWorkoutType(item)}
-                  className={`rounded-[20px] px-4 py-3 text-sm ${
-                    workoutType === item ? 'bg-[var(--tg-button-color)] text-[var(--tg-button-text-color)]' : 'bg-white/5 text-[var(--tg-text-color)]'
-                  }`}
-                >
-                  {item}
-                </button>
-              ))}
-            </div>
-            <TextInput value={durationMinutes} onChange={setDurationMinutes} placeholder="Длительность в минутах" />
+            <TextInput value={title} onChange={setTitle} placeholder="Название тренировки" />
+            <TextInput value={duration} onChange={setDuration} placeholder="Длительность в минутах" />
             <TextInput value={note} onChange={setNote} placeholder="Комментарий" multiline />
           </div>
         ) : null}
 
-        {type === 'note' ? <TextInput value={title} onChange={setTitle} placeholder="Текст заметки" multiline /> : null}
-
         <PrimaryButton
           onClick={() => {
             if (type === 'task' && title.trim()) {
-              void addEntry({ type: 'task', date: selectedDate, title: title.trim(), time: time || undefined, note: note || undefined, done: false });
+              void addPlannerItem({ type: 'task', title: title.trim(), date: selectedDate, time: time || undefined, note: note || undefined });
             }
-            if (type === 'expense' && amount.trim()) {
-              void addEntry({
-                type: 'expense',
-                date: selectedDate,
-                title: note.trim() || 'Трата',
-                amount: Number(amount || '0'),
-                category,
-                note: note || undefined,
-              });
+            if (type === 'event' && title.trim() && time) {
+              void addPlannerItem({ type: 'event', title: title.trim(), date: selectedDate, time, note: note || undefined });
             }
-            if (type === 'workout') {
-              void addEntry({
-                type: 'workout',
-                date: selectedDate,
-                title: workoutType,
-                durationMinutes: Number(durationMinutes || '0'),
-                workoutType,
-                note: note || undefined,
-              });
+            if (type === 'expense' && amount) {
+              void addPlannerItem({ type: 'expense', title: 'Трата', date: selectedDate, amount: Number(amount), category, note: note || undefined });
             }
-            if (type === 'note' && title.trim()) {
-              void addEntry({ type: 'note', date: selectedDate, title: title.trim(), note: undefined });
+            if (type === 'workout' && title.trim()) {
+              void addPlannerItem({ type: 'workout', title: title.trim(), date: selectedDate, duration: duration ? Number(duration) : undefined, note: note || undefined });
             }
-            setTitle('');
-            setTime('');
-            setNote('');
-            setAmount('');
           }}
         >
           Сохранить
         </PrimaryButton>
-
-        {!settings.modules.expenses && type === 'expense' ? <div className="text-xs text-[var(--tg-hint-color)]">Модуль трат сейчас выключен, но запись всё равно сохранится.</div> : null}
       </Card>
     </Screen>
   );

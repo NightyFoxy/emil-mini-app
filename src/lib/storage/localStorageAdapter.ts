@@ -1,4 +1,4 @@
-import type { AppStateSnapshot } from '@/types/models';
+import type { AppShellState } from '@/types/models';
 import type { StorageAdapter } from './types';
 
 export const LOCAL_STORAGE_KEY = 'emil-mini-app-state';
@@ -19,7 +19,7 @@ export function createLocalStorageAdapter(): StorageAdapter {
         return null;
       }
 
-      return JSON.parse(raw) as AppStateSnapshot;
+      return JSON.parse(raw) as AppShellState;
     },
     async save(snapshot) {
       if (!this.isAvailable()) {

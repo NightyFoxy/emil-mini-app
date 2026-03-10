@@ -1,16 +1,9 @@
-import type {
-  ChaosSource,
-  HelpFormat,
-  ReminderOption,
-  SetupPriority,
-  StartupModule,
-  ToneOption,
-} from '@/types/models';
+import type { ChaosSource, ReminderOption, SetupPriority, StartupModule, ToneOption } from '@/types/models';
 
 export const priorityOptions: Array<{ value: SetupPriority; label: string }> = [
-  { value: 'tasks', label: 'Дела и задачи' },
-  { value: 'routine', label: 'Режим дня' },
-  { value: 'expenses', label: 'Финансы и траты' },
+  { value: 'tasks', label: 'Дела' },
+  { value: 'routine', label: 'Режим' },
+  { value: 'expenses', label: 'Траты' },
   { value: 'workouts', label: 'Тренировки' },
   { value: 'all', label: 'Всё сразу' },
 ];
@@ -21,12 +14,6 @@ export const chaosOptions: Array<{ value: ChaosSource; label: string }> = [
   { value: 'hard_to_start', label: 'Не понимаю, с чего начать' },
   { value: 'procrastination', label: 'Постоянно откладываю' },
   { value: 'keeping_in_head', label: 'Всё держу в голове' },
-];
-
-export const helpFormatOptions: Array<{ value: HelpFormat; label: string }> = [
-  { value: 'very_short', label: 'Очень коротко' },
-  { value: 'short_list', label: 'Коротким списком' },
-  { value: 'step_by_step', label: 'По шагам' },
 ];
 
 export const toneOptions: Array<{ value: ToneOption; label: string }> = [

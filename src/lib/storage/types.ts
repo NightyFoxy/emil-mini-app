@@ -1,8 +1,8 @@
-import type { AppStateSnapshot } from '@/types/models';
+import type { AppShellState } from '@/types/models';
 
 export interface StorageAdapter {
   kind: 'localStorage' | 'telegramCloud' | 'memory';
   isAvailable(): boolean;
-  load(): Promise<AppStateSnapshot | null>;
-  save(snapshot: AppStateSnapshot): Promise<void>;
+  load(): Promise<AppShellState | null>;
+  save(snapshot: AppShellState): Promise<void>;
 }

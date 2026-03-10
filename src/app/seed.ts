@@ -1,87 +1,104 @@
-import type { AppStateSnapshot, CalendarEntry, SetupAnswers } from '@/types/models';
-import { buildProfile, buildSettingsFromAnswers } from '@/lib/profile/deriveProfile';
+import type { AppShellState, DailyCheckin, PlannerItem, SetupAnswers } from '@/types/models';
+import { buildReminderSettings, buildSetupProfile } from '@/lib/profile/deriveProfile';
 
 export const demoSetupAnswers: SetupAnswers = {
   displayName: 'Эмиль',
   priority: 'tasks',
   chaosSource: 'too_many_tasks',
-  helpFormat: 'short_list',
   tone: 'business',
   reminder: 'evening',
   startupModule: 'all_core',
   note: '',
 };
 
-export const demoEntries: CalendarEntry[] = [
+export const demoPlannerItems: PlannerItem[] = [
   {
     id: 'task-1',
+    userId: 'demo-user',
     type: 'task',
-    date: '2026-03-10',
     title: 'Собрать план дня',
+    date: '2026-03-10',
     time: '09:30',
     note: 'Выделить 3 главных дела',
-    done: false,
+    status: 'planned',
+    source: 'bot',
+    createdAt: '2026-03-09T18:00:00.000Z',
+    updatedAt: '2026-03-09T18:00:00.000Z',
   },
   {
-    id: 'task-2',
-    type: 'task',
+    id: 'event-1',
+    userId: 'demo-user',
+    type: 'event',
+    title: 'Стоматолог',
     date: '2026-03-10',
-    title: 'Подтвердить встречу',
-    done: false,
+    time: '14:00',
+    note: '',
+    status: 'planned',
+    source: 'bot',
+    createdAt: '2026-03-09T18:00:00.000Z',
+    updatedAt: '2026-03-09T18:00:00.000Z',
   },
   {
     id: 'expense-1',
+    userId: 'demo-user',
     type: 'expense',
-    date: '2026-03-10',
     title: 'Продукты',
+    date: '2026-03-10',
     amount: 1850,
     category: 'Еда',
+    status: 'planned',
+    source: 'miniapp',
+    createdAt: '2026-03-09T18:00:00.000Z',
+    updatedAt: '2026-03-09T18:00:00.000Z',
   },
   {
     id: 'workout-1',
+    userId: 'demo-user',
     type: 'workout',
-    date: '2026-03-11',
-    title: 'Ходьба',
-    durationMinutes: 30,
-    workoutType: 'Ходьба',
-  },
-  {
-    id: 'note-1',
-    type: 'note',
-    date: '2026-03-12',
-    title: 'Позвонить по страховке',
+    title: 'Тренировка в зале',
+    date: '2026-03-10',
+    duration: 45,
+    note: 'Без перегруза',
+    status: 'planned',
+    source: 'bot',
+    createdAt: '2026-03-09T18:00:00.000Z',
+    updatedAt: '2026-03-09T18:00:00.000Z',
   },
 ];
 
-export function createEmptyState(): AppStateSnapshot {
+export const demoCheckins: DailyCheckin[] = [
+  {
+    id: 'checkin-1',
+    userId: 'demo-user',
+    date: '2026-03-10',
+    type: 'morning_kickoff',
+    response: 'done',
+    completed: true,
+    createdAt: '2026-03-10T06:00:00.000Z',
+    updatedAt: '2026-03-10T06:00:00.000Z',
+  },
+];
+
+export function createEmptyShellState(): AppShellState {
   return {
     setupCompleted: false,
     setupAnswers: null,
     profile: null,
-    settings: {
-      reminder: 'off',
-      tone: 'calm',
-      modules: {
-        expenses: false,
-        workouts: false,
-      },
-    },
-    entries: [],
     selectedDate: '2026-03-10',
-    activeTab: 'calendar',
+    overlay: null,
     focusedTaskId: null,
   };
 }
 
-export function createDemoState(): AppStateSnapshot {
+export function createDemoShellState(): AppShellState {
   return {
     setupCompleted: true,
     setupAnswers: demoSetupAnswers,
-    profile: buildProfile(demoSetupAnswers, new Date('2026-03-10T08:00:00.000Z')),
-    settings: buildSettingsFromAnswers(demoSetupAnswers),
-    entries: demoEntries,
+    profile: buildSetupProfile(demoSetupAnswers, new Date('2026-03-09T08:00:00.000Z')),
     selectedDate: '2026-03-10',
-    activeTab: 'calendar',
+    overlay: null,
     focusedTaskId: 'task-1',
   };
 }
+
+export const demoReminderSettings = buildReminderSettings(demoSetupAnswers);

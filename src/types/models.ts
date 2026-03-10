@@ -1,5 +1,3 @@
-export const APP_TABS = ['calendar', 'capture', 'focus', 'settings'] as const;
-
 export const SETUP_PRIORITIES = ['tasks', 'routine', 'expenses', 'workouts', 'all'] as const;
 export const CHAOS_SOURCES = [
   'too_many_tasks',
@@ -8,52 +6,51 @@ export const CHAOS_SOURCES = [
   'procrastination',
   'keeping_in_head',
 ] as const;
-export const HELP_FORMATS = ['very_short', 'short_list', 'step_by_step'] as const;
 export const TONE_OPTIONS = ['calm', 'business', 'tough'] as const;
 export const REMINDER_OPTIONS = ['morning', 'day', 'evening', 'off'] as const;
 export const STARTUP_MODULES = ['tasks', 'expenses', 'workouts', 'all_core'] as const;
 
-export const ENTRY_TYPES = ['task', 'expense', 'workout', 'note'] as const;
-export const EXPENSE_CATEGORIES = ['Дом', 'Еда', 'Транспорт', 'Здоровье', 'Другое'] as const;
-export const WORKOUT_TYPES = ['Силовая', 'Кардио', 'Растяжка', 'Ходьба'] as const;
+export const PLANNER_ITEM_TYPES = ['task', 'event', 'expense', 'workout', 'note'] as const;
+export const PLANNER_ITEM_STATUSES = ['planned', 'done', 'moved', 'cancelled'] as const;
+export const ITEM_SOURCES = ['bot', 'miniapp'] as const;
+export const CHECKIN_TYPES = ['evening_plan', 'morning_kickoff', 'midday_progress', 'evening_review'] as const;
+export const CHECKIN_RESPONSES = ['done', 'move', 'later', 'help'] as const;
+export const OVERLAYS = ['capture', 'focus', 'settings'] as const;
 
-export type AppTab = (typeof APP_TABS)[number];
 export type SetupPriority = (typeof SETUP_PRIORITIES)[number];
 export type ChaosSource = (typeof CHAOS_SOURCES)[number];
-export type HelpFormat = (typeof HELP_FORMATS)[number];
 export type ToneOption = (typeof TONE_OPTIONS)[number];
 export type ReminderOption = (typeof REMINDER_OPTIONS)[number];
 export type StartupModule = (typeof STARTUP_MODULES)[number];
-export type EntryType = (typeof ENTRY_TYPES)[number];
-export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
-export type WorkoutType = (typeof WORKOUT_TYPES)[number];
+export type PlannerItemType = (typeof PLANNER_ITEM_TYPES)[number];
+export type PlannerItemStatus = (typeof PLANNER_ITEM_STATUSES)[number];
+export type PlannerItemSource = (typeof ITEM_SOURCES)[number];
+export type CheckinType = (typeof CHECKIN_TYPES)[number];
+export type CheckinResponse = (typeof CHECKIN_RESPONSES)[number];
+export type OverlayType = (typeof OVERLAYS)[number];
 
 export interface SetupAnswers {
   displayName: string;
   priority: SetupPriority;
   chaosSource: ChaosSource;
-  helpFormat: HelpFormat;
   tone: ToneOption;
   reminder: ReminderOption;
   startupModule: StartupModule;
   note: string;
 }
 
-export interface AppSettings {
+export interface ReminderSettings {
   reminder: ReminderOption;
   tone: ToneOption;
-  modules: {
-    expenses: boolean;
-    workouts: boolean;
-  };
+  expensesEnabled: boolean;
+  workoutsEnabled: boolean;
 }
 
-export interface UserProfile {
-  version: '2.0.0';
+export interface UserSetupProfile {
+  version: '3.0.0';
   displayName: string;
   priority: SetupPriority;
   chaosSource: ChaosSource;
-  helpFormat: HelpFormat;
   tone: ToneOption;
   reminder: ReminderOption;
   startupModule: StartupModule;
@@ -62,48 +59,81 @@ export interface UserProfile {
   updatedAt: string;
 }
 
-export interface CalendarEntryBase {
+export interface PlannerItem {
   id: string;
+  userId: string;
+  type: PlannerItemType;
+  title: string;
   date: string;
-  type: EntryType;
+  time?: string;
+  duration?: number;
+  amount?: number;
+  category?: string;
+  note?: string;
+  status: PlannerItemStatus;
+  source: PlannerItemSource;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DailyCheckin {
+  id: string;
+  userId: string;
+  date: string;
+  type: CheckinType;
+  response?: CheckinResponse;
+  completed: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PlannerState {
+  items: PlannerItem[];
+  checkins: DailyCheckin[];
+  reminderSettings: ReminderSettings;
+}
+
+export interface PlannerItemInput {
+  type: PlannerItemType;
+  title: string;
+  date: string;
+  time?: string;
+  duration?: number;
+  amount?: number;
+  category?: string;
   note?: string;
 }
 
-export interface TaskEntry extends CalendarEntryBase {
-  type: 'task';
-  title: string;
+export interface PlannerItemUpdate {
+  title?: string;
+  date?: string;
   time?: string;
-  done: boolean;
+  duration?: number;
+  amount?: number;
+  category?: string;
+  note?: string;
+  status?: PlannerItemStatus;
 }
 
-export interface ExpenseEntry extends CalendarEntryBase {
-  type: 'expense';
-  title: string;
-  amount: number;
-  category: ExpenseCategory;
+export interface PlannerQuery {
+  date?: string;
+  from?: string;
+  to?: string;
 }
 
-export interface WorkoutEntry extends CalendarEntryBase {
-  type: 'workout';
-  title: string;
-  durationMinutes: number;
-  workoutType: WorkoutType;
+export interface PlannerSyncClient {
+  fetchState(userId: string): Promise<PlannerState>;
+  createItem(userId: string, item: PlannerItemInput, source: PlannerItemSource): Promise<PlannerItem>;
+  updateItem(userId: string, itemId: string, patch: PlannerItemUpdate): Promise<PlannerItem>;
+  recordCheckin(userId: string, input: Omit<DailyCheckin, 'id' | 'createdAt' | 'updatedAt'>): Promise<DailyCheckin>;
+  updateReminderSettings(userId: string, settings: ReminderSettings): Promise<ReminderSettings>;
 }
 
-export interface NoteEntry extends CalendarEntryBase {
-  type: 'note';
-  title: string;
-}
-
-export type CalendarEntry = TaskEntry | ExpenseEntry | WorkoutEntry | NoteEntry;
-
-export interface AppStateSnapshot {
+export interface AppShellState {
   setupCompleted: boolean;
   setupAnswers: SetupAnswers | null;
-  profile: UserProfile | null;
-  settings: AppSettings;
-  entries: CalendarEntry[];
+  profile: UserSetupProfile | null;
   selectedDate: string;
-  activeTab: AppTab;
+  overlay: OverlayType | null;
   focusedTaskId: string | null;
 }

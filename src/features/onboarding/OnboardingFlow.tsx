@@ -3,29 +3,19 @@ import { useState } from 'react';
 import { Card, PrimaryButton, TextInput } from '@/components/ui';
 import { setupAnswersSchema } from '@/lib/profile/schemas';
 import type { SetupAnswers } from '@/types/models';
-import {
-  chaosOptions,
-  helpFormatOptions,
-  priorityOptions,
-  reminderOptions,
-  startupModuleOptions,
-  toneOptions,
-} from './config';
-
-const totalScreens = 7;
+import { chaosOptions, priorityOptions, reminderOptions, startupModuleOptions, toneOptions } from './config';
 
 const initialAnswers: SetupAnswers = {
   displayName: 'Пользователь',
   priority: 'tasks',
   chaosSource: 'too_many_tasks',
-  helpFormat: 'short_list',
   tone: 'calm',
   reminder: 'off',
   startupModule: 'tasks',
   note: '',
 };
 
-function OptionButtons<T extends string>({
+function QuestionOptions<T extends string>({
   value,
   options,
   onChange,
@@ -41,10 +31,10 @@ function OptionButtons<T extends string>({
           key={option.value}
           type="button"
           onClick={() => onChange(option.value)}
-          className={`min-h-20 w-full rounded-[24px] border px-4 py-4 text-left text-[15px] font-medium transition ${
+          className={`min-h-20 w-full rounded-[24px] border px-4 py-4 text-left text-[15px] font-medium ${
             value === option.value
               ? 'border-[var(--tg-button-color)] bg-[var(--tg-button-color)] text-[var(--tg-button-text-color)]'
-              : 'border-white/8 bg-white/5 text-[var(--tg-text-color)]'
+              : 'border-black/5 bg-white text-[var(--tg-text-color)]'
           }`}
         >
           {option.label}
@@ -62,151 +52,76 @@ export function OnboardingFlow({
   onComplete: (answers: SetupAnswers) => Promise<void>;
 }) {
   const [step, setStep] = useState(0);
-  const [submitting, setSubmitting] = useState(false);
   const [answers, setAnswers] = useState<SetupAnswers>({ ...initialAnswers, displayName });
-
-  const progress = Math.round(((step + 1) / totalScreens) * 100);
+  const [saving, setSaving] = useState(false);
+  const total = 5;
 
   async function finish() {
-    setSubmitting(true);
+    setSaving(true);
     await onComplete(setupAnswersSchema.parse(answers));
-    setSubmitting(false);
+    setSaving(false);
   }
 
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.16em] text-[var(--tg-hint-color)]">
-          <span>Настройка</span>
-          <span>{step + 1} / {totalScreens}</span>
-        </div>
-        <div className="rounded-full bg-white/6 p-1">
-          <div className="h-2 rounded-full bg-[var(--tg-button-color)] transition-all" style={{ width: `${progress}%` }} />
-        </div>
+      <div className="rounded-full bg-white/6 p-1">
+        <div className="h-2 rounded-full bg-[var(--tg-button-color)] transition-all" style={{ width: `${((step + 1) / total) * 100}%` }} />
       </div>
 
       <Card className="space-y-5 p-5">
         {step === 0 ? (
           <>
-            <h1 className="text-[1.8rem] font-semibold tracking-[-0.04em] text-[var(--tg-text-color)]">
-              Что хочешь наладить в первую очередь?
-            </h1>
-            <OptionButtons
-              value={answers.priority}
-              options={priorityOptions}
-              onChange={(value) => setAnswers((current) => ({ ...current, priority: value }))}
-            />
+            <h1 className="text-[1.8rem] font-semibold tracking-[-0.04em] text-[var(--tg-text-color)]">Что хочешь наладить в первую очередь?</h1>
+            <QuestionOptions value={answers.priority} options={priorityOptions} onChange={(value) => setAnswers((current) => ({ ...current, priority: value }))} />
           </>
         ) : null}
 
         {step === 1 ? (
           <>
-            <h1 className="text-[1.8rem] font-semibold tracking-[-0.04em] text-[var(--tg-text-color)]">
-              Где чаще всего начинается хаос?
-            </h1>
-            <OptionButtons
-              value={answers.chaosSource}
-              options={chaosOptions}
-              onChange={(value) => setAnswers((current) => ({ ...current, chaosSource: value }))}
-            />
+            <h1 className="text-[1.8rem] font-semibold tracking-[-0.04em] text-[var(--tg-text-color)]">Где чаще всего начинается хаос?</h1>
+            <QuestionOptions value={answers.chaosSource} options={chaosOptions} onChange={(value) => setAnswers((current) => ({ ...current, chaosSource: value }))} />
           </>
         ) : null}
 
         {step === 2 ? (
           <>
-            <h1 className="text-[1.8rem] font-semibold tracking-[-0.04em] text-[var(--tg-text-color)]">
-              Как тебе удобнее получать помощь?
-            </h1>
-            <OptionButtons
-              value={answers.helpFormat}
-              options={helpFormatOptions}
-              onChange={(value) => setAnswers((current) => ({ ...current, helpFormat: value }))}
-            />
+            <h1 className="text-[1.8rem] font-semibold tracking-[-0.04em] text-[var(--tg-text-color)]">Какой стиль тебе подходит?</h1>
+            <QuestionOptions value={answers.tone} options={toneOptions} onChange={(value) => setAnswers((current) => ({ ...current, tone: value }))} />
           </>
         ) : null}
 
         {step === 3 ? (
           <>
-            <h1 className="text-[1.8rem] font-semibold tracking-[-0.04em] text-[var(--tg-text-color)]">
-              Какой тон тебе подходит?
-            </h1>
-            <OptionButtons
-              value={answers.tone}
-              options={toneOptions}
-              onChange={(value) => setAnswers((current) => ({ ...current, tone: value }))}
-            />
+            <h1 className="text-[1.8rem] font-semibold tracking-[-0.04em] text-[var(--tg-text-color)]">Когда напоминать?</h1>
+            <QuestionOptions value={answers.reminder} options={reminderOptions} onChange={(value) => setAnswers((current) => ({ ...current, reminder: value }))} />
           </>
         ) : null}
 
         {step === 4 ? (
           <>
-            <h1 className="text-[1.8rem] font-semibold tracking-[-0.04em] text-[var(--tg-text-color)]">
-              Когда лучше напоминать?
-            </h1>
-            <OptionButtons
-              value={answers.reminder}
-              options={reminderOptions}
-              onChange={(value) => setAnswers((current) => ({ ...current, reminder: value }))}
-            />
-          </>
-        ) : null}
-
-        {step === 5 ? (
-          <>
-            <h1 className="text-[1.8rem] font-semibold tracking-[-0.04em] text-[var(--tg-text-color)]">
-              Что включить сразу?
-            </h1>
-            <OptionButtons
-              value={answers.startupModule}
-              options={startupModuleOptions}
-              onChange={(value) => setAnswers((current) => ({ ...current, startupModule: value }))}
-            />
-          </>
-        ) : null}
-
-        {step === 6 ? (
-          <>
-            <div className="space-y-2">
-              <h1 className="text-[1.8rem] font-semibold tracking-[-0.04em] text-[var(--tg-text-color)]">
-                Есть что-то важное, что стоит учитывать?
-              </h1>
-              <p className="text-sm text-[var(--tg-hint-color)]">Можно пропустить.</p>
-            </div>
+            <h1 className="text-[1.8rem] font-semibold tracking-[-0.04em] text-[var(--tg-text-color)]">Что включить сразу?</h1>
+            <QuestionOptions value={answers.startupModule} options={startupModuleOptions} onChange={(value) => setAnswers((current) => ({ ...current, startupModule: value }))} />
             <TextInput
               value={answers.note}
               onChange={(value) => setAnswers((current) => ({ ...current, note: value }))}
-              placeholder="Например: вечером мало сил"
+              placeholder="Есть что-то важное, что нужно учитывать?"
               multiline
-              maxLength={240}
+              maxLength={200}
             />
-            <PrimaryButton onClick={() => void finish()} disabled={submitting}>
-              Завершить
-            </PrimaryButton>
+            <PrimaryButton onClick={() => void finish()} disabled={saving}>Готово</PrimaryButton>
           </>
         ) : null}
 
-        {step < 6 ? (
-          <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={() => setStep((current) => Math.max(current - 1, 0))}
-              className="flex-1 rounded-[20px] border border-white/8 px-4 py-3 text-sm text-[var(--tg-text-color)]"
-            >
+        {step < 4 ? (
+          <div className="flex gap-3">
+            <button type="button" onClick={() => setStep((current) => Math.max(current - 1, 0))} className="flex-1 rounded-[20px] border border-black/8 px-4 py-3 text-sm text-[var(--tg-text-color)]">
               Назад
             </button>
-            <PrimaryButton className="flex-1" onClick={() => setStep((current) => Math.min(current + 1, 6))}>
+            <PrimaryButton className="flex-1" onClick={() => setStep((current) => Math.min(current + 1, 4))}>
               Дальше
             </PrimaryButton>
           </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => void finish()}
-            className="text-sm text-[var(--tg-hint-color)]"
-          >
-            Пропустить
-          </button>
-        )}
+        ) : null}
       </Card>
     </div>
   );

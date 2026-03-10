@@ -19,7 +19,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    useAppStore.setState({ activeTab: 'calendar' });
+    useAppStore.setState({ overlay: null, focusedTaskId: null });
     console.error('App crashed', error, errorInfo);
   }
 

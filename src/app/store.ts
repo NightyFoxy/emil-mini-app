@@ -1,259 +1,272 @@
 import { create } from 'zustand';
 
-import { buildProfile, buildSettingsFromAnswers } from '@/lib/profile/deriveProfile';
 import { createStorageAdapter } from '@/lib/storage';
+import { buildReminderSettings, buildSetupProfile } from '@/lib/profile/deriveProfile';
+import { getPlannerRepository } from '@/lib/planner';
 import type {
-  AppSettings,
-  AppStateSnapshot,
-  AppTab,
-  CalendarEntry,
-  ExpenseCategory,
+  AppShellState,
+  DailyCheckin,
+  OverlayType,
+  PlannerItem,
+  PlannerItemInput,
   ReminderOption,
+  ReminderSettings,
   SetupAnswers,
-  ExpenseEntry,
-  NoteEntry,
-  TaskEntry,
   ToneOption,
-  WorkoutEntry,
-  WorkoutType,
 } from '@/types/models';
-import { createDemoState, createEmptyState } from './seed';
+import { createDemoShellState, demoCheckins, demoPlannerItems, demoReminderSettings, demoSetupAnswers, createEmptyShellState } from './seed';
 
-const storage = createStorageAdapter();
+const shellStorage = createStorageAdapter();
+const currentUserId = 'demo-user';
 
 function todayString() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function migrateLegacySnapshot(snapshot: Record<string, unknown>): AppStateSnapshot {
-  const base = createEmptyState();
-  const legacyEntries: CalendarEntry[] = [];
-
-  const tasks = Array.isArray(snapshot.tasks) ? snapshot.tasks : [];
-  for (const task of tasks) {
-    if (typeof task === 'object' && task && 'title' in task) {
-      const item = task as Record<string, unknown>;
-      legacyEntries.push({
-        id: String(item.id ?? crypto.randomUUID()),
-        type: 'task',
-        title: String(item.title ?? 'Задача'),
-        date: typeof item.dueDate === 'string' && item.dueDate ? item.dueDate.slice(0, 10) : todayString(),
-        note: typeof item.nextAction === 'string' ? item.nextAction : undefined,
-        time: undefined,
-        done: item.status === 'done',
-      });
-    }
-  }
-
-  const expenses = Array.isArray(snapshot.expenses) ? snapshot.expenses : [];
-  for (const expense of expenses) {
-    if (typeof expense === 'object' && expense) {
-      const item = expense as Record<string, unknown>;
-      legacyEntries.push({
-        id: String(item.id ?? crypto.randomUUID()),
-        type: 'expense',
-        title: String(item.title ?? 'Трата'),
-        amount: Number(item.amount ?? 0),
-        category: (item.category as ExpenseCategory) ?? 'Другое',
-        date: typeof item.createdAt === 'string' ? item.createdAt.slice(0, 10) : todayString(),
-        note: undefined,
-      });
-    }
-  }
-
-  const workouts = Array.isArray(snapshot.workouts) ? snapshot.workouts : [];
-  for (const workout of workouts) {
-    if (typeof workout === 'object' && workout) {
-      const item = workout as Record<string, unknown>;
-      legacyEntries.push({
-        id: String(item.id ?? crypto.randomUUID()),
-        type: 'workout',
-        title: String(item.title ?? 'Тренировка'),
-        durationMinutes: Number(item.durationMinutes ?? 20),
-        workoutType: (item.focus as WorkoutType) ?? 'Ходьба',
-        date: todayString(),
-        note: undefined,
-      });
-    }
-  }
-
-  return {
-    ...base,
-    setupCompleted: false,
-    entries: legacyEntries,
-    selectedDate: todayString(),
-  };
+function parseDeepLinkedDate() {
+  const params = new URLSearchParams(window.location.search);
+  const date = params.get('date');
+  return date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null;
 }
 
-export function normalizeSnapshot(snapshot: unknown): AppStateSnapshot | null {
+function normalizeShell(snapshot: unknown): AppShellState | null {
   if (!snapshot || typeof snapshot !== 'object') {
     return null;
   }
 
   const raw = snapshot as Record<string, unknown>;
-  if ('setupCompleted' in raw && Array.isArray(raw.entries)) {
-    const base = createEmptyState();
+  if ('setupCompleted' in raw) {
+    const base = createEmptyShellState();
     return {
       ...base,
       ...raw,
-      settings: {
-        ...base.settings,
-        ...(raw.settings as AppSettings | undefined),
-        modules: {
-          ...base.settings.modules,
-          ...((raw.settings as AppSettings | undefined)?.modules ?? {}),
-        },
-      },
-      entries: raw.entries as CalendarEntry[],
-      selectedDate: typeof raw.selectedDate === 'string' ? raw.selectedDate : todayString(),
-      activeTab: (raw.activeTab as AppTab) ?? 'calendar',
-      focusedTaskId: (raw.focusedTaskId as string | null) ?? null,
+      selectedDate: typeof raw.selectedDate === 'string' ? raw.selectedDate : base.selectedDate,
+      overlay: (raw.overlay as OverlayType | null | undefined) ?? null,
+      focusedTaskId: (raw.focusedTaskId as string | null | undefined) ?? null,
     };
   }
 
-  if ('tasks' in raw || 'expenses' in raw || 'workouts' in raw) {
-    return migrateLegacySnapshot(raw);
+  if ('setupCompleted' in raw || 'onboardingCompleted' in raw) {
+    return createEmptyShellState();
   }
 
   return null;
 }
 
-async function persistState(state: AppStore) {
-  const snapshot: AppStateSnapshot = {
-    setupCompleted: state.setupCompleted,
-    setupAnswers: state.setupAnswers,
-    profile: state.profile,
-    settings: state.settings,
-    entries: state.entries,
-    selectedDate: state.selectedDate,
-    activeTab: state.activeTab,
-    focusedTaskId: state.focusedTaskId,
-  };
-
-  try {
-    await storage.save(snapshot);
-  } catch (error) {
-    console.error('Failed to persist app state', error);
-  }
-}
-
-interface AppStore extends AppStateSnapshot {
+interface AppStore extends AppShellState {
   initialized: boolean;
-  loadState: () => Promise<void>;
+  plannerItems: PlannerItem[];
+  dailyCheckins: DailyCheckin[];
+  reminderSettings: ReminderSettings;
+  loadApp: () => Promise<void>;
+  reloadPlanner: () => Promise<void>;
   completeSetup: (answers: SetupAnswers) => Promise<void>;
-  setActiveTab: (tab: AppTab) => void;
-  setSelectedDate: (date: string) => void;
-  setFocusedTaskId: (taskId: string | null) => void;
-  addEntry: (input: Omit<TaskEntry, 'id'> | Omit<ExpenseEntry, 'id'> | Omit<WorkoutEntry, 'id'> | Omit<NoteEntry, 'id'>) => Promise<void>;
-  toggleTaskDone: (taskId: string) => Promise<void>;
-  updateSettings: (patch: Partial<AppSettings>) => Promise<void>;
+  setSelectedDate: (date: string) => Promise<void>;
+  openOverlay: (overlay: OverlayType) => void;
+  closeOverlay: () => void;
+  openFocusForTask: (taskId: string | null) => void;
+  addPlannerItem: (input: PlannerItemInput) => Promise<void>;
+  updatePlannerItem: (itemId: string, patch: Partial<PlannerItem>) => Promise<void>;
+  markTaskDone: (taskId: string) => Promise<void>;
+  moveTaskToNextDay: (taskId: string) => Promise<void>;
+  answerCheckin: (response: 'done' | 'move' | 'later' | 'help') => Promise<void>;
+  updateReminderSettings: (patch: Partial<ReminderSettings>) => Promise<void>;
   rerunSetup: () => Promise<void>;
   resetAllData: () => Promise<void>;
 }
 
-export const useAppStore = create<AppStore>((set, get) => ({
-  ...createEmptyState(),
-  initialized: false,
+async function persistShell(state: AppStore) {
+  const snapshot: AppShellState = {
+    setupCompleted: state.setupCompleted,
+    setupAnswers: state.setupAnswers,
+    profile: state.profile,
+    selectedDate: state.selectedDate,
+    overlay: state.overlay,
+    focusedTaskId: state.focusedTaskId,
+  };
+  await shellStorage.save(snapshot);
+}
 
-  async loadState() {
-    let loaded: AppStateSnapshot | null = null;
-    try {
-      loaded = normalizeSnapshot(await storage.load());
-    } catch (error) {
-      console.error('Failed to load app state', error);
+export const useAppStore = create<AppStore>((set, get) => ({
+  ...createEmptyShellState(),
+  initialized: false,
+  plannerItems: [],
+  dailyCheckins: [],
+  reminderSettings: {
+    reminder: 'off',
+    tone: 'calm',
+    expensesEnabled: false,
+    workoutsEnabled: false,
+  },
+
+  async loadApp() {
+    const shell = normalizeShell(await shellStorage.load());
+    const plannerRepository = getPlannerRepository();
+    let plannerState = await plannerRepository.getState(currentUserId);
+
+    if (import.meta.env.DEV && plannerState.items.length === 0) {
+      for (const item of demoPlannerItems) {
+        await plannerRepository.createItem(currentUserId, item, item.source);
+      }
+      for (const checkin of demoCheckins) {
+        await plannerRepository.recordCheckin(currentUserId, {
+          date: checkin.date,
+          type: checkin.type,
+          response: checkin.response,
+          completed: checkin.completed,
+        });
+      }
+      await plannerRepository.updateReminderSettings(currentUserId, demoReminderSettings);
+      plannerState = await plannerRepository.getState(currentUserId);
     }
 
+    const deepLinkDate = parseDeepLinkedDate();
+    const baseShell = shell ?? (import.meta.env.DEV ? createDemoShellState() : createEmptyShellState());
+    const fallbackSetup = import.meta.env.DEV && !shell ? demoSetupAnswers : null;
+    const fallbackProfile = import.meta.env.DEV && !shell ? buildSetupProfile(demoSetupAnswers, new Date('2026-03-10T08:00:00.000Z')) : null;
+
     set({
-      ...(loaded ?? (import.meta.env.DEV ? createDemoState() : createEmptyState())),
+      ...baseShell,
+      setupAnswers: baseShell.setupAnswers ?? fallbackSetup,
+      profile: baseShell.profile ?? fallbackProfile,
+      setupCompleted: baseShell.setupCompleted || Boolean(fallbackProfile),
+      selectedDate: deepLinkDate ?? baseShell.selectedDate ?? todayString(),
+      plannerItems: plannerState.items,
+      dailyCheckins: plannerState.checkins,
+      reminderSettings: plannerState.reminderSettings,
       initialized: true,
+    });
+  },
+
+  async reloadPlanner() {
+    const plannerState = await getPlannerRepository().getState(currentUserId);
+    set({
+      plannerItems: plannerState.items,
+      dailyCheckins: plannerState.checkins,
+      reminderSettings: plannerState.reminderSettings,
     });
   },
 
   async completeSetup(answers) {
-    const profile = buildProfile(answers);
+    const profile = buildSetupProfile(answers);
+    const reminderSettings = buildReminderSettings(answers);
+    await getPlannerRepository().updateReminderSettings(currentUserId, reminderSettings);
     set({
       setupCompleted: true,
       setupAnswers: answers,
       profile,
-      settings: buildSettingsFromAnswers(answers),
-      activeTab: 'calendar',
+      selectedDate: parseDeepLinkedDate() ?? todayString(),
+      overlay: null,
+      reminderSettings,
     });
-    await persistState(get());
+    await persistShell(get());
+    await get().reloadPlanner();
   },
 
-  setActiveTab(tab) {
-    set({ activeTab: tab });
-    void persistState(get());
-  },
-
-  setSelectedDate(date) {
+  async setSelectedDate(date) {
     set({ selectedDate: date });
-    void persistState(get());
+    await persistShell(get());
   },
 
-  setFocusedTaskId(taskId) {
-    set({ focusedTaskId: taskId });
-    void persistState(get());
+  openOverlay(overlay) {
+    set({ overlay });
+    void persistShell(get());
   },
 
-  async addEntry(input) {
-    const entry: CalendarEntry = {
-      ...input,
-      id: crypto.randomUUID(),
-    } as CalendarEntry;
-    set((state) => ({
-      entries: [entry, ...state.entries],
-      focusedTaskId: entry.type === 'task' ? entry.id : state.focusedTaskId,
-      activeTab: 'calendar',
-      selectedDate: entry.date,
-    }));
-    await persistState(get());
+  closeOverlay() {
+    set({ overlay: null });
+    void persistShell(get());
   },
 
-  async toggleTaskDone(taskId) {
-    set((state) => ({
-      entries: state.entries.map((entry) =>
-        entry.type === 'task' && entry.id === taskId ? { ...entry, done: !entry.done } : entry,
-      ),
-    }));
-    await persistState(get());
+  openFocusForTask(taskId) {
+    set({ focusedTaskId: taskId, overlay: 'focus' });
+    void persistShell(get());
   },
 
-  async updateSettings(patch) {
-    set((state) => ({
-      settings: {
-        ...state.settings,
-        ...patch,
-        modules: {
-          ...state.settings.modules,
-          ...(patch.modules ?? {}),
-        },
-      },
-      profile: state.profile
+  async addPlannerItem(input) {
+    await getPlannerRepository().createItem(currentUserId, input, 'miniapp');
+    set({ overlay: null, selectedDate: input.date });
+    await persistShell(get());
+    await get().reloadPlanner();
+  },
+
+  async updatePlannerItem(itemId, patch) {
+    await getPlannerRepository().updateItem(currentUserId, itemId, patch);
+    await get().reloadPlanner();
+  },
+
+  async markTaskDone(taskId) {
+    await getPlannerRepository().updateItem(currentUserId, taskId, { status: 'done' });
+    await get().reloadPlanner();
+  },
+
+  async moveTaskToNextDay(taskId) {
+    const task = get().plannerItems.find((item) => item.id === taskId);
+    if (!task) {
+      return;
+    }
+    const nextDay = new Date(`${task.date}T00:00:00`);
+    nextDay.setDate(nextDay.getDate() + 1);
+    const date = nextDay.toISOString().slice(0, 10);
+    await getPlannerRepository().updateItem(currentUserId, taskId, { date, status: 'moved' });
+    await get().reloadPlanner();
+  },
+
+  async answerCheckin(response) {
+    await getPlannerRepository().recordCheckin(currentUserId, {
+      date: get().selectedDate,
+      type: 'midday_progress',
+      response,
+      completed: true,
+    });
+    await get().reloadPlanner();
+  },
+
+  async updateReminderSettings(patch) {
+    const nextSettings = {
+      ...get().reminderSettings,
+      ...patch,
+    };
+    await getPlannerRepository().updateReminderSettings(currentUserId, nextSettings);
+    set({
+      reminderSettings: nextSettings,
+      profile: get().profile
         ? {
-            ...state.profile,
-            reminder: (patch.reminder as ReminderOption | undefined) ?? state.profile.reminder,
-            tone: (patch.tone as ToneOption | undefined) ?? state.profile.tone,
+            ...get().profile!,
+            reminder: (patch.reminder as ReminderOption | undefined) ?? get().profile!.reminder,
+            tone: (patch.tone as ToneOption | undefined) ?? get().profile!.tone,
             updatedAt: new Date().toISOString(),
           }
-        : state.profile,
-    }));
-    await persistState(get());
+        : null,
+    });
+    await persistShell(get());
   },
 
   async rerunSetup() {
-    set({
-      setupCompleted: false,
-      activeTab: 'calendar',
-    });
-    await persistState(get());
+    set({ setupCompleted: false, overlay: null });
+    await persistShell(get());
   },
 
   async resetAllData() {
-    set({
-      ...createEmptyState(),
-      initialized: true,
+    const plannerRepository = getPlannerRepository();
+    await plannerRepository.updateReminderSettings(currentUserId, {
+      reminder: 'off',
+      tone: 'calm',
+      expensesEnabled: false,
+      workoutsEnabled: false,
     });
-    await persistState(get());
+    window.localStorage.clear();
+    set({
+      ...createEmptyShellState(),
+      initialized: true,
+      plannerItems: [],
+      dailyCheckins: [],
+      reminderSettings: {
+        reminder: 'off',
+        tone: 'calm',
+        expensesEnabled: false,
+        workoutsEnabled: false,
+      },
+    });
   },
 }));

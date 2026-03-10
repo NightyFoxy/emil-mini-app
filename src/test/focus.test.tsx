@@ -1,40 +1,58 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 
 import { FocusScreen } from '@/features/focus/FocusScreen';
-import { createDemoState, createEmptyState } from '@/app/seed';
-import { normalizeSnapshot, useAppStore } from '@/app/store';
+import { createDemoShellState } from '@/app/seed';
+import { useAppStore } from '@/app/store';
 
-describe('FocusScreen', () => {
-  it('shows safe empty state when there are no tasks', () => {
-    useAppStore.setState({ ...createEmptyState(), initialized: true });
+describe('focus', () => {
+  it('focus no longer crashes with empty state', () => {
+    useAppStore.setState({
+      ...createDemoShellState(),
+      initialized: true,
+      plannerItems: [],
+      dailyCheckins: [],
+      reminderSettings: {
+        reminder: 'off',
+        tone: 'calm',
+        expensesEnabled: false,
+        workoutsEnabled: false,
+      },
+      focusedTaskId: null,
+    });
 
     render(<FocusScreen />);
-
     expect(screen.getByText('Нет задачи для фокуса')).toBeInTheDocument();
-    expect(screen.getByText('Вернуться в календарь')).toBeInTheDocument();
   });
 
-  it('does not crash with malformed focused task id', () => {
+  it('focus no longer crashes with malformed selected task id', () => {
     useAppStore.setState({
-      ...createDemoState(),
+      ...createDemoShellState(),
       initialized: true,
       focusedTaskId: 'broken-id',
+      plannerItems: [
+        {
+          id: 'task-1',
+          userId: 'demo-user',
+          type: 'task',
+          title: 'Собрать план дня',
+          date: '2026-03-10',
+          status: 'planned',
+          source: 'bot',
+          createdAt: '2026-03-10T08:00:00.000Z',
+          updatedAt: '2026-03-10T08:00:00.000Z',
+        },
+      ],
+      dailyCheckins: [],
+      reminderSettings: {
+        reminder: 'off',
+        tone: 'calm',
+        expensesEnabled: false,
+        workoutsEnabled: false,
+      },
     });
 
     render(<FocusScreen />);
-
-    expect(screen.getByText('Фокус')).toBeInTheDocument();
-    expect(screen.getByText('Собрать план дня')).toBeInTheDocument();
-  });
-
-  it('normalizes corrupted persisted data into a safe state', () => {
-    const normalized = normalizeSnapshot({
-      tasks: [{ id: 't1', title: 'Старая задача', status: 'todo' }],
-      expenses: [],
-      workouts: [],
-    });
-
-    expect(normalized?.entries[0]?.type).toBe('task');
-    expect(normalized?.activeTab).toBe('calendar');
+    fireEvent.click(screen.getByText('Слишком большая'));
+    expect(screen.getByText('Сократи задачу до действия на 5 минут')).toBeInTheDocument();
   });
 });

@@ -9,21 +9,14 @@ import { CaptureScreen } from '@/features/capture/CaptureScreen';
 import { FocusScreen } from '@/features/focus/FocusScreen';
 import { SettingsScreen } from '@/features/settings/SettingsScreen';
 import { Card } from '@/components/ui';
-import type { AppTab } from '@/types/models';
-
-const tabs: Array<{ id: AppTab; label: string }> = [
-  { id: 'calendar', label: 'Календарь' },
-  { id: 'capture', label: 'Добавить' },
-  { id: 'focus', label: 'Фокус' },
-  { id: 'settings', label: 'Настройки' },
-];
 
 function AppBody() {
   const initialized = useAppStore((state) => state.initialized);
   const setupCompleted = useAppStore((state) => state.setupCompleted);
-  const activeTab = useAppStore((state) => state.activeTab);
+  const overlay = useAppStore((state) => state.overlay);
   const completeSetup = useAppStore((state) => state.completeSetup);
-  const setActiveTab = useAppStore((state) => state.setActiveTab);
+  const openOverlay = useAppStore((state) => state.openOverlay);
+  const closeOverlay = useAppStore((state) => state.closeOverlay);
 
   useEffect(() => {
     ensureTelegramEnvironment();
@@ -55,38 +48,41 @@ function AppBody() {
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 pb-[calc(92px+env(safe-area-inset-bottom))] pt-[calc(16px+env(safe-area-inset-top))]">
       <main className="flex-1">
-        {activeTab === 'calendar' ? <CalendarScreen /> : null}
-        {activeTab === 'capture' ? <CaptureScreen /> : null}
-        {activeTab === 'focus' ? <FocusScreen /> : null}
-        {activeTab === 'settings' ? <SettingsScreen /> : null}
+        <CalendarScreen />
       </main>
 
-      <nav className="fixed inset-x-0 bottom-0 mx-auto flex max-w-md gap-2 border-t border-white/6 bg-[var(--tg-bg-color)]/92 px-4 pb-[calc(14px+env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 rounded-2xl px-3 py-2 text-xs font-medium transition ${
-              activeTab === tab.id
-                ? 'bg-[var(--tg-button-color)] text-[var(--tg-button-text-color)]'
-                : 'text-[var(--tg-hint-color)]'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </nav>
+      <button
+        type="button"
+        onClick={() => openOverlay('capture')}
+        className="fixed bottom-[calc(24px+env(safe-area-inset-bottom))] left-1/2 z-20 w-[calc(100%-32px)] max-w-[380px] -translate-x-1/2 rounded-[22px] bg-[var(--tg-button-color)] px-5 py-4 text-sm font-semibold text-[var(--tg-button-text-color)] shadow-[0_10px_30px_rgba(15,23,42,0.2)]"
+      >
+        + Добавить
+      </button>
+
+      {overlay ? (
+        <div className="fixed inset-0 z-30 bg-[rgba(15,23,42,0.36)] px-4 pb-[calc(20px+env(safe-area-inset-bottom))] pt-[calc(20px+env(safe-area-inset-top))] backdrop-blur-sm">
+          <div className="mx-auto h-full w-full max-w-md overflow-auto rounded-[28px] bg-[var(--tg-bg-color)] p-4 shadow-[0_20px_60px_rgba(15,23,42,0.28)]">
+            <div className="mb-4 flex justify-end">
+              <button type="button" onClick={closeOverlay} className="rounded-full bg-white/6 px-3 py-2 text-sm text-[var(--tg-text-color)]">
+                Закрыть
+              </button>
+            </div>
+            {overlay === 'capture' ? <CaptureScreen /> : null}
+            {overlay === 'focus' ? <FocusScreen /> : null}
+            {overlay === 'settings' ? <SettingsScreen /> : null}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
 
 export function App() {
-  const loadState = useAppStore((state) => state.loadState);
+  const loadApp = useAppStore((state) => state.loadApp);
 
   useEffect(() => {
-    void loadState();
-  }, [loadState]);
+    void loadApp();
+  }, [loadApp]);
 
   return <AppBody />;
 }
